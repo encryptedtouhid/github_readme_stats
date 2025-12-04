@@ -374,9 +374,12 @@ public sealed class GitHubClient : IGitHubClient
         if (result.Errors?.Count > 0)
         {
             var error = result.Errors[0];
+            // NOT_FOUND errors are handled by the caller based on null data
+            // This allows proper distinction between user/repo not found
             if (error.Type == "NOT_FOUND")
             {
-                throw new UserNotFoundException(variables["login"]?.ToString() ?? "unknown");
+                _logger.LogDebug("GraphQL NOT_FOUND: {Message}", error.Message);
+                return result; // Let caller handle null data
             }
             if (error.Type == "RATE_LIMITED" || error.Message?.Contains("rate limit", StringComparison.OrdinalIgnoreCase) == true)
             {
