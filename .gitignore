@@ -1,0 +1,13 @@
+/old
+/docs
+.DS_Store
+/src/GitHubStats.Api/bin
+/src/GitHubStats.Api/obj
+/src/GitHubStats.Application/bin
+/src/GitHubStats.Application/obj
+/src/GitHubStats.Infrastructure/obj
+/src/GitHubStats.Rendering/bin
+/src/GitHubStats.Rendering/obj
+/src/GitHubStats.Infrastructure/bin
+/src/GitHubStats.Domain/bin
+/src/GitHubStats.Domain/obj
