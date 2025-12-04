@@ -11,3 +11,4 @@
 /src/GitHubStats.Infrastructure/bin
 /src/GitHubStats.Domain/bin
 /src/GitHubStats.Domain/obj
+/src/.vs
