@@ -35,8 +35,8 @@ The API will be available at `http://localhost:5042`.
 |----------|-------------|
 | `/api/stats?username={user}` | User statistics card |
 | `/api/top-langs?username={user}` | Top languages card |
-| `/api/repos?username={user}&repo={repo}` | Repository card |
-| `/api/gists?username={user}` | Gist card |
+| `/api/pin?username={user}&repo={repo}` | Repository pin card |
+| `/api/gist?id={gist_id}` | Gist card |
 | `/api/wakatime?username={user}` | WakaTime stats card |
 | `/health` | Health check |
 
