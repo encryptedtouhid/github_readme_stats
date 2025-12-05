@@ -15,7 +15,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/github_readme_stats.git
+   git clone https://github.com/encryptedtouhid/github_readme_stats.git
    cd github_readme_stats
    ```
 
