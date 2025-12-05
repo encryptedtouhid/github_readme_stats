@@ -393,13 +393,59 @@ public static class ThemeManager
             BgColor = "1D252C",
             BorderColor = "e4e2e2"
         },
+        ["github_light"] = new CardColors
+        {
+            TitleColor = "0969DA",
+            TextColor = "1F2328",
+            IconColor = "0969DA",
+            BgColor = "FFFFFF",
+            BorderColor = "D0D7DE",
+            RingColor = "0969DA"
+        },
+        ["github_light_default"] = new CardColors
+        {
+            TitleColor = "24292F",
+            TextColor = "57606A",
+            IconColor = "0969DA",
+            BgColor = "FFFFFF",
+            BorderColor = "D0D7DE",
+            RingColor = "0969DA"
+        },
+        ["github_light_high_contrast"] = new CardColors
+        {
+            TitleColor = "0E1116",
+            TextColor = "0E1116",
+            IconColor = "0349B4",
+            BgColor = "FFFFFF",
+            BorderColor = "7D8590",
+            RingColor = "0349B4"
+        },
         ["github_dark"] = new CardColors
         {
             TitleColor = "58A6FF",
-            TextColor = "C3D1D9",
-            IconColor = "1F6FEB",
+            TextColor = "C9D1D9",
+            IconColor = "58A6FF",
             BgColor = "0D1117",
-            BorderColor = "e4e2e2"
+            BorderColor = "30363D",
+            RingColor = "58A6FF"
+        },
+        ["github_dark_default"] = new CardColors
+        {
+            TitleColor = "E6EDF3",
+            TextColor = "7D8590",
+            IconColor = "2F81F7",
+            BgColor = "0D1117",
+            BorderColor = "30363D",
+            RingColor = "2F81F7"
+        },
+        ["github_dark_high_contrast"] = new CardColors
+        {
+            TitleColor = "FFFFFF",
+            TextColor = "F0F3F6",
+            IconColor = "71B7FF",
+            BgColor = "0A0C10",
+            BorderColor = "7A828E",
+            RingColor = "71B7FF"
         },
         ["github_dark_dimmed"] = new CardColors
         {
@@ -407,7 +453,44 @@ public static class ThemeManager
             TextColor = "ADBAC7",
             IconColor = "539BF5",
             BgColor = "22272E",
-            BorderColor = "373E47"
+            BorderColor = "444C56",
+            RingColor = "539BF5"
+        },
+        ["github_dark_colorblind"] = new CardColors
+        {
+            TitleColor = "58A6FF",
+            TextColor = "C9D1D9",
+            IconColor = "58A6FF",
+            BgColor = "0D1117",
+            BorderColor = "30363D",
+            RingColor = "58A6FF"
+        },
+        ["github_light_colorblind"] = new CardColors
+        {
+            TitleColor = "0969DA",
+            TextColor = "1F2328",
+            IconColor = "0969DA",
+            BgColor = "FFFFFF",
+            BorderColor = "D0D7DE",
+            RingColor = "0969DA"
+        },
+        ["github_dark_tritanopia"] = new CardColors
+        {
+            TitleColor = "58A6FF",
+            TextColor = "C9D1D9",
+            IconColor = "58A6FF",
+            BgColor = "0D1117",
+            BorderColor = "30363D",
+            RingColor = "58A6FF"
+        },
+        ["github_light_tritanopia"] = new CardColors
+        {
+            TitleColor = "0969DA",
+            TextColor = "1F2328",
+            IconColor = "0969DA",
+            BgColor = "FFFFFF",
+            BorderColor = "D0D7DE",
+            RingColor = "0969DA"
         },
         ["discord_old_blurple"] = new CardColors
         {
