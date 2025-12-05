@@ -57,11 +57,164 @@ Add to your GitHub README:
 | `hide_border` | Hide card border | `false` |
 | `border_radius` | Card corner radius | `4.5` |
 
-### Available Themes
+### Themes
 
-- `default` - Dark theme with coral accent
-- `aurora` - Purple/teal gradient theme
-- `neon` - Cyan/magenta cyberpunk theme
+Use the `theme` parameter to customize your card:
+
+```markdown
+![GitHub Streak](https://your-domain.com/api/streak?username=YOUR_USERNAME&theme=tokyonight)
+```
+
+#### Theme Examples
+
+| Theme | Preview |
+|-------|---------|
+| `github_light` | ![github_light](https://your-domain.com/api/streak?username=torvalds&theme=github_light) |
+| `github_dark` | ![github_dark](https://your-domain.com/api/streak?username=torvalds&theme=github_dark) |
+| `tokyonight` | ![tokyonight](https://your-domain.com/api/streak?username=torvalds&theme=tokyonight) |
+| `dracula` | ![dracula](https://your-domain.com/api/streak?username=torvalds&theme=dracula) |
+| `nord` | ![nord](https://your-domain.com/api/streak?username=torvalds&theme=nord) |
+| `radical` | ![radical](https://your-domain.com/api/streak?username=torvalds&theme=radical) |
+| `sunset_dark` | ![sunset_dark](https://your-domain.com/api/streak?username=torvalds&theme=sunset_dark) |
+| `ocean_deep` | ![ocean_deep](https://your-domain.com/api/streak?username=torvalds&theme=ocean_deep) |
+| `cyber` | ![cyber](https://your-domain.com/api/streak?username=torvalds&theme=cyber) |
+| `aurora` | ![aurora](https://your-domain.com/api/streak?username=torvalds&theme=aurora) |
+
+#### GitHub Themes
+
+| Theme | Description |
+|-------|-------------|
+| `github_light` | GitHub light mode |
+| `github_light_default` | GitHub light with gray titles |
+| `github_light_high_contrast` | GitHub light high contrast |
+| `github_light_colorblind` | GitHub light colorblind-friendly |
+| `github_light_tritanopia` | GitHub light tritanopia-friendly |
+| `github_dark` | GitHub dark mode |
+| `github_dark_default` | GitHub dark with white titles |
+| `github_dark_high_contrast` | GitHub dark high contrast |
+| `github_dark_dimmed` | GitHub dimmed dark |
+| `github_dark_colorblind` | GitHub dark colorblind-friendly |
+| `github_dark_tritanopia` | GitHub dark tritanopia-friendly |
+
+#### Popular Themes
+
+| Theme | Description |
+|-------|-------------|
+| `default` | Light theme with blue accent |
+| `dark` | Pure dark theme |
+| `radical` | Pink/purple gradient |
+| `tokyonight` | Tokyo Night color scheme |
+| `dracula` | Dracula purple theme |
+| `nord` | Nord arctic colors |
+| `gruvbox` | Retro groove colors |
+| `onedark` | Atom One Dark theme |
+| `catppuccin_mocha` | Catppuccin Mocha |
+| `catppuccin_latte` | Catppuccin Latte |
+| `rose_pine` | Rose Pine theme |
+
+#### Editor Themes
+
+| Theme | Description |
+|-------|-------------|
+| `monokai` | Monokai editor theme |
+| `cobalt` | Cobalt blue theme |
+| `cobalt2` | Cobalt2 theme |
+| `nightowl` | Night Owl editor theme |
+| `material-palenight` | Material Palenight |
+| `darcula` | JetBrains Darcula |
+| `one_dark_pro` | One Dark Pro |
+| `ayu-mirage` | Ayu Mirage theme |
+| `noctis_minimus` | Noctis Minimus |
+| `synthwave` | 80s synthwave style |
+
+#### Framework & Brand Themes
+
+| Theme | Description |
+|-------|-------------|
+| `vue` | Vue.js green theme |
+| `vue-dark` | Dark Vue.js theme |
+| `react` | React brand colors |
+| `swift` | Swift orange theme |
+| `algolia` | Algolia brand colors |
+| `discord_old_blurple` | Discord old blurple |
+| `buefy` | Buefy framework colors |
+
+#### Color Palette Themes
+
+| Theme | Description |
+|-------|-------------|
+| `solarized-dark` | Solarized dark palette |
+| `solarized-light` | Solarized light palette |
+| `gruvbox_light` | Light gruvbox variant |
+| `shades-of-purple` | Purple shades theme |
+| `midnight-purple` | Midnight purple theme |
+| `blue-green` | Blue-green gradient |
+| `blue_navy` | Navy blue theme |
+| `calm` | Calm pastel colors |
+| `calm_pink` | Calm pink pastel |
+| `rose` | Rose pink theme |
+
+#### All Other Themes
+
+| Theme | Description |
+|-------|-------------|
+| `default_repocard` | Light theme for repo cards |
+| `merko` | Green forest theme |
+| `highcontrast` | High contrast dark |
+| `prussian` | Prussian blue theme |
+| `great-gatsby` | Great Gatsby gold |
+| `bear` | Bear app theme |
+| `chartreuse-dark` | Chartreuse dark theme |
+| `gotham` | Gotham dark theme |
+| `graywhite` | Gray and white minimal |
+| `vision-friendly-dark` | Accessible dark theme |
+| `flag-india` | India flag colors |
+| `omni` | Omni dark theme |
+| `jolly` | Jolly bright theme |
+| `maroongold` | Maroon and gold |
+| `yeblu` | Yellow and blue |
+| `blueberry` | Blueberry colors |
+| `slateorange` | Slate and orange |
+| `kacho_ga` | Japanese aesthetic |
+| `outrun` | Outrun retro style |
+| `ocean_dark` | Deep ocean dark |
+| `city_lights` | City lights theme |
+| `aura_dark` | Aura dark theme |
+| `panda` | Panda syntax theme |
+| `aura` | Aura purple theme |
+| `apprentice` | Apprentice vim theme |
+| `moltack` | Moltack colors |
+| `codeSTACKr` | codeSTACKr theme |
+| `date_night` | Date night romantic |
+| `holi` | Holi festival colors |
+| `neon` | Cyan/magenta cyberpunk |
+| `ambient_gradient` | Ambient gradient |
+
+#### Streak Card Exclusive Themes
+
+Modern themes designed specifically for the streak card:
+
+| Theme | Description |
+|-------|-------------|
+| `sunset` | Warm sunset gradient |
+| `sunset_dark` | Dark sunset variant |
+| `ocean` | Ocean blue theme |
+| `ocean_deep` | Deep ocean theme |
+| `forest` | Forest green theme |
+| `forest_dark` | Dark forest variant |
+| `purple_wave` | Purple wave gradient |
+| `purple_galaxy` | Galaxy purple theme |
+| `cyber` | Cyberpunk neon |
+| `fire` | Fire red/orange theme |
+| `mint` | Fresh mint green |
+| `coral` | Coral pink theme |
+| `aurora` | Purple/teal aurora |
+| `golden` | Golden luxury theme |
+| `golden_dark` | Dark gold variant |
+| `rose_gold` | Rose gold elegant |
+| `electric` | Electric blue theme |
+| `lavender` | Soft lavender |
+| `arctic` | Arctic ice blue |
 
 ## Configuration
 
