@@ -192,6 +192,48 @@ public sealed class CardRenderer : ICardRenderer
         return card.Render(RenderWakaTimeBody(filteredLangs, stats, options, colors, card.Width));
     }
 
+    public string RenderStreakCard(StreakStats stats, StreakCardOptions options)
+    {
+        var colors = ThemeManager.GetColors(
+            options.Theme ?? "default",
+            options.TitleColor,
+            options.TextColor,
+            options.IconColor,
+            options.BgColor,
+            options.BorderColor,
+            options.RingColor);
+
+        var width = options.CardWidth ?? 495;
+        // Desired visual height (what user sees) - slim modern design
+        var visualHeight = options.CardHeight ?? 150;
+        // Card.cs subtracts 30 when HideTitle=true, so we add 30 to compensate
+        var cardHeight = visualHeight + 30;
+
+        // Determine visible sections
+        var visibleSections = 3;
+        if (options.HideTotalContributions) visibleSections--;
+        if (options.HideCurrentStreak) visibleSections--;
+        if (options.HideLongestStreak) visibleSections--;
+
+        var card = new Card
+        {
+            Width = width,
+            Height = cardHeight, // Use compensated height
+            BorderRadius = options.BorderRadius ?? 4.5,
+            Colors = colors,
+            Title = string.Empty, // Streak card doesn't have a header title
+            HideBorder = options.HideBorder,
+            HideTitle = true, // Always hide title for streak card
+            DisableAnimations = options.DisableAnimations,
+            A11yTitle = $"GitHub Streak Stats for {stats.Username}",
+            A11yDesc = $"Total Contributions: {stats.TotalContributions}, Current Streak: {stats.CurrentStreak.Length} days, Longest Streak: {stats.LongestStreak.Length} days"
+        };
+
+        card.CustomCss = GetStreakCardCss(colors, options);
+        // Pass the visual height for internal layout calculations
+        return card.Render(RenderStreakCardBody(stats, options, colors, width, visualHeight, visibleSections));
+    }
+
     public string RenderErrorCard(string message, string? secondaryMessage = null, CardColors? colors = null)
     {
         colors ??= ThemeManager.GetColors();
@@ -770,6 +812,204 @@ public sealed class CardRenderer : ICardRenderer
             >= 1_024 => $"{bytes / 1_024.0:F2} KB",
             _ => $"{bytes} B"
         };
+    }
+
+    #endregion
+
+    #region Private Methods - Streak Card
+
+    private static string GetStreakCardCss(CardColors colors, StreakCardOptions options)
+    {
+        var currStreakNumColor = options.CurrStreakNumColor ?? colors.TitleColor;
+        var sideLabelsColor = options.SideLabelsColor ?? colors.TextColor;
+        var datesColor = options.DatesColor ?? colors.TextColor;
+        var fireColor = options.FireColor ?? "ff6b6b";
+        var accentColor = colors.TitleColor;
+        var iconColor = colors.IconColor ?? colors.TitleColor;
+
+        return $@"
+/* Modern Typography - Colorful and symmetric */
+.stat-value {{
+    font: 700 28px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.5px;
+}}
+.stat-value.total {{ fill: #{iconColor}; }}
+.stat-value.current {{ fill: #{currStreakNumColor}; font-size: 32px; }}
+.stat-value.longest {{ fill: #{accentColor}; }}
+.stat-label {{
+    font: 600 10px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}}
+.stat-label.total {{ fill: #{iconColor}; opacity: 0.85; }}
+.stat-label.current {{ fill: #{currStreakNumColor}; opacity: 0.85; }}
+.stat-label.longest {{ fill: #{accentColor}; opacity: 0.85; }}
+.stat-date {{
+    font: 400 9px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    fill: #{datesColor};
+    opacity: 0.6;
+}}
+.fire {{ fill: #{fireColor}; }}
+
+/* Section animations */
+.streak-section {{
+    opacity: 0;
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}}
+
+/* Number pop animation */
+.number-pop {{
+    opacity: 0;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}}
+
+/* Fade in */
+.fade-in {{
+    opacity: 0;
+    animation: fadeIn 0.4s ease-out forwards;
+}}
+
+@keyframes slideUp {{
+    0% {{ opacity: 0; transform: translateY(15px); }}
+    100% {{ opacity: 1; transform: translateY(0); }}
+}}
+
+@keyframes popIn {{
+    0% {{ opacity: 0; transform: scale(0.5); }}
+    70% {{ transform: scale(1.1); }}
+    100% {{ opacity: 1; transform: scale(1); }}
+}}
+
+@keyframes fadeIn {{
+    0% {{ opacity: 0; }}
+    100% {{ opacity: 1; }}
+}}
+";
+    }
+
+    private static string RenderStreakCardBody(StreakStats stats, StreakCardOptions options, CardColors colors, int width, int height, int visibleSections)
+    {
+        using var body = new SvgBuilder(4096);
+
+        if (visibleSections == 0) return "";
+
+        // Symmetric layout constants
+        const int margin = 25;
+        const int bodyOffset = 25;
+        var contentWidth = width - (margin * 2);
+        var sectionWidth = contentWidth / visibleSections;
+
+        // Symmetric vertical positions (same for all sections)
+        var centerY = (height / 2.0) - bodyOffset;
+        var numberY = centerY - 8;     // Number at top
+        var labelY = centerY + 22;      // Label in middle
+        var dateY = centerY + 38;       // Date at bottom
+
+        var currentSectionIndex = 0;
+
+        // Total Contributions (left section)
+        if (!options.HideTotalContributions)
+        {
+            var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
+            body.Append(RenderModernSection(
+                x,
+                numberY, labelY, dateY,
+                stats.TotalContributions.ToString("N0"),
+                "Total",
+                FormatDateRange(stats.FirstContribution, DateOnly.FromDateTime(DateTime.UtcNow)),
+                "total",
+                currentSectionIndex * 100));
+            currentSectionIndex++;
+        }
+
+        // Current Streak (center section - no ring, symmetric with others)
+        if (!options.HideCurrentStreak)
+        {
+            var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
+            body.Append(RenderModernSection(
+                x,
+                numberY, labelY, dateY,
+                stats.CurrentStreak.Length.ToString(),
+                "Current",
+                FormatDateRange(stats.CurrentStreak.Start, stats.CurrentStreak.End),
+                "current",
+                currentSectionIndex * 100));
+            currentSectionIndex++;
+        }
+
+        // Longest Streak (right section)
+        if (!options.HideLongestStreak)
+        {
+            var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
+            body.Append(RenderModernSection(
+                x,
+                numberY, labelY, dateY,
+                stats.LongestStreak.Length.ToString(),
+                "Longest",
+                FormatDateRange(stats.LongestStreak.Start, stats.LongestStreak.End),
+                "longest",
+                currentSectionIndex * 100));
+        }
+
+        return body.ToString();
+    }
+
+    private static string RenderModernSection(int x, double numberY, double labelY, double dateY, string value, string label, string dateRange, string cssClass, int animationDelay)
+    {
+        return $@"
+<g class=""streak-section"" style=""animation-delay: {animationDelay}ms"">
+    <text class=""stat-value number-pop {cssClass}"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 50}ms"">{HttpUtility.HtmlEncode(value)}</text>
+    <text class=""stat-label fade-in {cssClass}"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 100}ms"">{HttpUtility.HtmlEncode(label)}</text>
+    <text class=""stat-date fade-in"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 150}ms"">{HttpUtility.HtmlEncode(dateRange)}</text>
+</g>";
+    }
+
+    private static string RenderModernCurrentStreak(int x, double ringY, double numberY, double labelY, double dateY, string value, string label, string dateRange, int ringRadius, int animationDelay, CardColors colors)
+    {
+        // Modern gradient ring with animated draw effect
+        var circumference = 2 * Math.PI * ringRadius;
+
+        // Background ring (subtle)
+        var ringBg = $@"<circle cx=""{x}"" cy=""{ringY:F1}"" r=""{ringRadius}"" fill=""none"" stroke=""#{colors.TextColor}"" stroke-width=""3"" stroke-opacity=""0.08""/>";
+
+        // Animated gradient ring
+        var ring = $@"<circle cx=""{x}"" cy=""{ringY:F1}"" r=""{ringRadius}"" fill=""none"" class=""ring ring-anim glow"" stroke-width=""3"" stroke-linecap=""round"" transform=""rotate(-90 {x} {ringY:F1})"" style=""animation-delay: {animationDelay + 100}ms""/>";
+
+        return $@"
+<g class=""streak-section"" style=""animation-delay: {animationDelay}ms"">
+    {ringBg}
+    {ring}
+    <text class=""stat-value number-pop current"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"" dominant-baseline=""middle"" style=""animation-delay: {animationDelay + 200}ms"">{HttpUtility.HtmlEncode(value)}</text>
+    <text class=""stat-label fade-in current"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 300}ms"">{HttpUtility.HtmlEncode(label)}</text>
+    <text class=""stat-date fade-in"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 350}ms"">{HttpUtility.HtmlEncode(dateRange)}</text>
+</g>";
+    }
+
+    private static string FormatDateRange(DateOnly? start, DateOnly? end)
+    {
+        if (!start.HasValue || !end.HasValue)
+            return "No Data";
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        string FormatDate(DateOnly date)
+        {
+            if (date == today)
+                return "Present";
+
+            // Format: "Jan 5" or "Jan 5, 2023" if different year
+            if (date.Year == today.Year)
+                return date.ToString("MMM d");
+            return date.ToString("MMM d, yyyy");
+        }
+
+        var startStr = FormatDate(start.Value);
+        var endStr = FormatDate(end.Value);
+
+        if (start.Value == end.Value)
+            return startStr;
+
+        return $"{startStr} - {endStr}";
     }
 
     #endregion

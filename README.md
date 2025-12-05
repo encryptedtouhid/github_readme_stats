@@ -4,6 +4,7 @@ A .NET 9 Web API that generates customizable SVG cards displaying GitHub user an
 
 ## Features
 
+- **Streak Stats Card** - Current streak, longest streak, and total contributions with animated SVG
 - **User Stats Card** - Stars, commits, PRs, reviews, followers, and rank
 - **Top Languages Card** - Most used programming languages
 - **Repository Card** - Pinned repository information
@@ -33,12 +34,36 @@ The API will be available at `http://localhost:5042`.
 
 | Endpoint | Description |
 |----------|-------------|
+| `/api/streak?username={user}` | Streak statistics card |
 | `/api/stats?username={user}` | User statistics card |
 | `/api/top-langs?username={user}` | Top languages card |
 | `/api/pin?username={user}&repo={repo}` | Repository pin card |
 | `/api/gist?id={gist_id}` | Gist card |
 | `/api/wakatime?username={user}` | WakaTime stats card |
 | `/health` | Health check |
+
+## Usage
+
+Add to your GitHub README:
+
+```markdown
+![GitHub Streak](https://your-domain.com/api/streak?username=YOUR_USERNAME)
+```
+
+### Streak Card Options
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `username` | GitHub username (required) | - |
+| `theme` | Card theme | `default` |
+| `hide_border` | Hide card border | `false` |
+| `border_radius` | Card corner radius | `4.5` |
+
+### Available Themes
+
+- `default` - Dark theme with coral accent
+- `aurora` - Purple/teal gradient theme
+- `neon` - Cyan/magenta cyberpunk theme
 
 ## Configuration
 

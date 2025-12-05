@@ -576,6 +576,179 @@ public static class ThemeManager
             IconColor = "94FBAB",
             BgColor = "4158D0,C850C0,FFCC70",
             BorderColor = "e4e2e2"
+        },
+
+        // Modern Streak Card Themes
+        ["sunset"] = new CardColors
+        {
+            TitleColor = "FF6B6B",
+            TextColor = "2D3436",
+            IconColor = "FFA502",
+            BgColor = "FFF5F5",
+            BorderColor = "FFE0E0",
+            RingColor = "FF6B6B"
+        },
+        ["sunset_dark"] = new CardColors
+        {
+            TitleColor = "FF6B6B",
+            TextColor = "DFE6E9",
+            IconColor = "FFA502",
+            BgColor = "1A1A2E",
+            BorderColor = "2D2D44",
+            RingColor = "FF6B6B"
+        },
+        ["ocean"] = new CardColors
+        {
+            TitleColor = "00B4D8",
+            TextColor = "2D3436",
+            IconColor = "0077B6",
+            BgColor = "F0FCFF",
+            BorderColor = "CAF0F8",
+            RingColor = "00B4D8"
+        },
+        ["ocean_deep"] = new CardColors
+        {
+            TitleColor = "00D9FF",
+            TextColor = "B8E0FF",
+            IconColor = "0096C7",
+            BgColor = "0A1929",
+            BorderColor = "173A5E",
+            RingColor = "00D9FF"
+        },
+        ["forest"] = new CardColors
+        {
+            TitleColor = "2ECC71",
+            TextColor = "2D3436",
+            IconColor = "27AE60",
+            BgColor = "F0FFF4",
+            BorderColor = "C6F6D5",
+            RingColor = "2ECC71"
+        },
+        ["forest_dark"] = new CardColors
+        {
+            TitleColor = "00FF88",
+            TextColor = "B8F5D8",
+            IconColor = "00CC6A",
+            BgColor = "0D1F17",
+            BorderColor = "1A3D2B",
+            RingColor = "00FF88"
+        },
+        ["purple_wave"] = new CardColors
+        {
+            TitleColor = "A855F7",
+            TextColor = "2D3436",
+            IconColor = "9333EA",
+            BgColor = "FAF5FF",
+            BorderColor = "E9D5FF",
+            RingColor = "A855F7"
+        },
+        ["purple_galaxy"] = new CardColors
+        {
+            TitleColor = "C084FC",
+            TextColor = "E0CFFC",
+            IconColor = "A855F7",
+            BgColor = "1A0A2E",
+            BorderColor = "2D1B4E",
+            RingColor = "C084FC"
+        },
+        ["cyber"] = new CardColors
+        {
+            TitleColor = "00FFFF",
+            TextColor = "FFFFFF",
+            IconColor = "FF00FF",
+            BgColor = "0A0A0A",
+            BorderColor = "1A1A1A",
+            RingColor = "00FFFF"
+        },
+        ["fire"] = new CardColors
+        {
+            TitleColor = "FF4500",
+            TextColor = "FFFFFF",
+            IconColor = "FF6B35",
+            BgColor = "1A0A00",
+            BorderColor = "2D1A0A",
+            RingColor = "FF4500"
+        },
+        ["mint"] = new CardColors
+        {
+            TitleColor = "00D9A5",
+            TextColor = "2D3436",
+            IconColor = "00B894",
+            BgColor = "F0FFFC",
+            BorderColor = "C1FAF0",
+            RingColor = "00D9A5"
+        },
+        ["coral"] = new CardColors
+        {
+            TitleColor = "FF7F7F",
+            TextColor = "2D3436",
+            IconColor = "FF6B6B",
+            BgColor = "FFF8F8",
+            BorderColor = "FFE4E4",
+            RingColor = "FF7F7F"
+        },
+        ["aurora"] = new CardColors
+        {
+            TitleColor = "7B68EE",
+            TextColor = "E8E8FF",
+            IconColor = "00CED1",
+            BgColor = "0F0F1A",
+            BorderColor = "1E1E3F",
+            RingColor = "7B68EE"
+        },
+        ["golden"] = new CardColors
+        {
+            TitleColor = "FFD700",
+            TextColor = "1A1A2E",
+            IconColor = "FFC107",
+            BgColor = "FFFCF0",
+            BorderColor = "FFF3C4",
+            RingColor = "FFD700"
+        },
+        ["golden_dark"] = new CardColors
+        {
+            TitleColor = "FFD700",
+            TextColor = "F5F5F5",
+            IconColor = "FFC107",
+            BgColor = "1A1A0A",
+            BorderColor = "2D2D1A",
+            RingColor = "FFD700"
+        },
+        ["rose_gold"] = new CardColors
+        {
+            TitleColor = "E8A4A4",
+            TextColor = "2D3436",
+            IconColor = "D4A5A5",
+            BgColor = "FFF5F5",
+            BorderColor = "FFE4E4",
+            RingColor = "E8A4A4"
+        },
+        ["electric"] = new CardColors
+        {
+            TitleColor = "00FF41",
+            TextColor = "FFFFFF",
+            IconColor = "39FF14",
+            BgColor = "0D0D0D",
+            BorderColor = "1A1A1A",
+            RingColor = "00FF41"
+        },
+        ["lavender"] = new CardColors
+        {
+            TitleColor = "9F7AEA",
+            TextColor = "4A5568",
+            IconColor = "805AD5",
+            BgColor = "FAF5FF",
+            BorderColor = "E9D8FD",
+            RingColor = "9F7AEA"
+        },
+        ["arctic"] = new CardColors
+        {
+            TitleColor = "63B3ED",
+            TextColor = "2D3748",
+            IconColor = "4299E1",
+            BgColor = "EBF8FF",
+            BorderColor = "BEE3F8",
+            RingColor = "63B3ED"
         }
     };
 

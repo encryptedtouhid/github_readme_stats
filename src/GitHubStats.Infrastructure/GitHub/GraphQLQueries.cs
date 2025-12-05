@@ -153,4 +153,23 @@ public static class GraphQLQueries
             }
         }
         """;
+
+    public const string ContributionCalendarQuery = """
+        query contributionCalendar($login: String!, $from: DateTime!, $to: DateTime!) {
+            user(login: $login) {
+                createdAt
+                contributionsCollection(from: $from, to: $to) {
+                    contributionCalendar {
+                        totalContributions
+                        weeks {
+                            contributionDays {
+                                contributionCount
+                                date
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        """;
 }

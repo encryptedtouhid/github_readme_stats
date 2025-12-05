@@ -33,6 +33,11 @@ public interface ICardRenderer
     string RenderWakaTimeCard(WakaTimeStats stats, WakaTimeCardOptions options);
 
     /// <summary>
+    /// Renders a streak card SVG.
+    /// </summary>
+    string RenderStreakCard(StreakStats stats, StreakCardOptions options);
+
+    /// <summary>
     /// Renders an error card SVG.
     /// </summary>
     string RenderErrorCard(string message, string? secondaryMessage = null, CardColors? colors = null);
@@ -132,4 +137,26 @@ public record WakaTimeCardOptions : CardOptions
     public int? LineHeight { get; init; }
     public bool HideProgress { get; init; }
     public string DisplayFormat { get; init; } = "time";
+}
+
+/// <summary>
+/// Streak card specific options.
+/// </summary>
+public record StreakCardOptions : CardOptions
+{
+    public int? CardWidth { get; init; }
+    public int? CardHeight { get; init; }
+    public string? RingColor { get; init; }
+    public string? FireColor { get; init; }
+    public string? CurrStreakNumColor { get; init; }
+    public string? SideNumsColor { get; init; }
+    public string? CurrStreakLabelColor { get; init; }
+    public string? SideLabelsColor { get; init; }
+    public string? DatesColor { get; init; }
+    public string? StrokeColor { get; init; }
+    public string DateFormat { get; init; } = "M j[, Y]";
+    public bool HideTotalContributions { get; init; }
+    public bool HideCurrentStreak { get; init; }
+    public bool HideLongestStreak { get; init; }
+    public int? StartingYear { get; init; }
 }
