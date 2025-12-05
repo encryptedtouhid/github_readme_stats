@@ -116,6 +116,11 @@ builder.Services.AddOutputCache(options =>
     options.AddPolicy("WakaTimeCard", policy =>
         policy.Expire(TimeSpan.FromHours(12))
               .Tag("wakatime"));
+
+    // Streak card cache policy
+    options.AddPolicy("StreakCard", policy =>
+        policy.Expire(TimeSpan.FromHours(3))
+              .Tag("streak"));
 });
 
 // Health Checks
@@ -177,6 +182,7 @@ app.MapRepoEndpoint();
 app.MapTopLangsEndpoint();
 app.MapGistEndpoint();
 app.MapWakaTimeEndpoint();
+app.MapStreakEndpoint();
 
 // Status endpoints
 app.MapGet("/", () => Results.Ok(new { status = "ok", service = "GitHub Readme Stats" }))

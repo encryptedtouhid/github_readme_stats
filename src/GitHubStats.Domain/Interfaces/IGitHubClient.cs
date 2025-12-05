@@ -44,4 +44,12 @@ public interface IGitHubClient
     Task<Gist> GetGistAsync(
         string gistId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches contribution streak statistics from GitHub.
+    /// </summary>
+    Task<StreakStats> GetStreakStatsAsync(
+        string username,
+        int? startingYear = null,
+        CancellationToken cancellationToken = default);
 }

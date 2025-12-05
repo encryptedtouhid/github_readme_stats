@@ -331,6 +331,209 @@ public sealed class GitHubClient : IGitHubClient
         };
     }
 
+    public async Task<StreakStats> GetStreakStatsAsync(
+        string username,
+        int? startingYear = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new MissingParameterException(["username"]);
+        }
+
+        var currentYear = DateTime.UtcNow.Year;
+        var minYear = startingYear ?? 2005; // Git was created in 2005
+
+        // Collect all contribution days from all years
+        var allContributions = new List<(DateOnly Date, int Count)>();
+        var totalContributions = 0;
+        DateOnly? userCreatedAt = null;
+
+        for (var year = minYear; year <= currentYear; year++)
+        {
+            var fromDate = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var toDate = year == currentYear
+                ? DateTime.UtcNow
+                : new DateTime(year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+
+            var variables = new Dictionary<string, object?>
+            {
+                ["login"] = username,
+                ["from"] = fromDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                ["to"] = toDate.ToString("yyyy-MM-ddTHH:mm:ssZ")
+            };
+
+            try
+            {
+                var response = await ExecuteGraphQLAsync<ContributionCalendarResponse>(
+                    GraphQLQueries.ContributionCalendarQuery,
+                    variables,
+                    cancellationToken);
+
+                if (response.Data?.User == null)
+                {
+                    throw new UserNotFoundException(username);
+                }
+
+                // Get user creation date from first successful request
+                if (!userCreatedAt.HasValue && response.Data.User.CreatedAt != null)
+                {
+                    if (DateTime.TryParse(response.Data.User.CreatedAt, out var createdDate))
+                    {
+                        userCreatedAt = DateOnly.FromDateTime(createdDate);
+                        // Update minYear based on account creation if no starting year was specified
+                        if (!startingYear.HasValue)
+                        {
+                            minYear = Math.Max(minYear, createdDate.Year);
+                        }
+                    }
+                }
+
+                var calendar = response.Data.User.ContributionsCollection.ContributionCalendar;
+                totalContributions += calendar.TotalContributions;
+
+                foreach (var week in calendar.Weeks)
+                {
+                    foreach (var day in week.ContributionDays)
+                    {
+                        if (DateOnly.TryParse(day.Date, out var date))
+                        {
+                            allContributions.Add((date, day.ContributionCount));
+                        }
+                    }
+                }
+            }
+            catch (UserNotFoundException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch contributions for year {Year}", year);
+                // Continue with other years
+            }
+        }
+
+        // Sort contributions by date
+        allContributions = allContributions.OrderBy(c => c.Date).ToList();
+
+        // Calculate streaks
+        var (currentStreak, longestStreak, firstContribution) = CalculateStreaks(allContributions);
+
+        return new StreakStats
+        {
+            Username = username,
+            TotalContributions = totalContributions,
+            CurrentStreak = currentStreak,
+            LongestStreak = longestStreak,
+            FirstContribution = firstContribution
+        };
+    }
+
+    private static (StreakInfo Current, StreakInfo Longest, DateOnly? FirstContribution) CalculateStreaks(
+        List<(DateOnly Date, int Count)> contributions)
+    {
+        if (contributions.Count == 0)
+        {
+            return (
+                new StreakInfo { Length = 0 },
+                new StreakInfo { Length = 0 },
+                null);
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Sort contributions by date and dedupe - take max count per date
+        var sortedContributions = contributions
+            .GroupBy(c => c.Date)
+            .Select(g => (Date: g.Key, Count: g.Max(c => c.Count)))
+            .OrderBy(c => c.Date)
+            .ToList();
+
+        // Find first contribution date
+        DateOnly? firstContribution = null;
+        foreach (var c in sortedContributions)
+        {
+            if (c.Count > 0)
+            {
+                firstContribution = c.Date;
+                break;
+            }
+        }
+
+        if (firstContribution == null)
+        {
+            return (
+                new StreakInfo { Length = 0 },
+                new StreakInfo { Length = 0 },
+                null);
+        }
+
+        // Matching PHP logic: iterate through all dates in order
+        // A streak breaks when count == 0 (unless it's today)
+        var longestStreak = new StreakInfo { Length = 0 };
+        var currentStreak = new StreakInfo { Length = 0 };
+
+        DateOnly? currentStart = null;
+        DateOnly? currentEnd = null;
+        var currentLength = 0;
+
+        foreach (var (date, count) in sortedContributions)
+        {
+            if (count > 0)
+            {
+                // Has contribution - increment streak
+                currentLength++;
+                currentEnd = date;
+
+                // Set start on first day of streak
+                if (currentLength == 1)
+                {
+                    currentStart = date;
+                }
+
+                // Update longest if current streak is longer
+                if (currentLength > longestStreak.Length)
+                {
+                    longestStreak = new StreakInfo
+                    {
+                        Length = currentLength,
+                        Start = currentStart,
+                        End = currentEnd
+                    };
+                }
+            }
+            else if (date != today)
+            {
+                // No contribution and not today - reset streak
+                currentLength = 0;
+                currentStart = today;
+                currentEnd = today;
+            }
+            // If count == 0 and date == today, don't break the streak
+        }
+
+        // Current streak is valid if it ends today or yesterday
+        if (currentLength > 0 && currentEnd.HasValue)
+        {
+            var yesterday = today.AddDays(-1);
+            if (currentEnd.Value >= yesterday)
+            {
+                currentStreak = new StreakInfo
+                {
+                    Length = currentLength,
+                    Start = currentStart,
+                    End = currentEnd
+                };
+            }
+        }
+
+        return (
+            currentStreak,
+            longestStreak,
+            firstContribution);
+    }
+
     private async Task<int> FetchTotalCommitsAsync(string username, CancellationToken cancellationToken)
     {
         var token = _tokenRotator.GetNextToken();
@@ -588,6 +791,39 @@ internal sealed class CommitSearchResponse
 {
     [JsonPropertyName("total_count")]
     public int TotalCount { get; set; }
+}
+
+internal sealed class ContributionCalendarResponse
+{
+    public ContributionUserData? User { get; set; }
+}
+
+internal sealed class ContributionUserData
+{
+    public string? CreatedAt { get; set; }
+    public required ContributionsCollectionData ContributionsCollection { get; set; }
+}
+
+internal sealed class ContributionsCollectionData
+{
+    public required ContributionCalendarData ContributionCalendar { get; set; }
+}
+
+internal sealed class ContributionCalendarData
+{
+    public int TotalContributions { get; set; }
+    public required List<ContributionWeekData> Weeks { get; set; }
+}
+
+internal sealed class ContributionWeekData
+{
+    public required List<ContributionDayData> ContributionDays { get; set; }
+}
+
+internal sealed class ContributionDayData
+{
+    public int ContributionCount { get; set; }
+    public required string Date { get; set; }
 }
 
 #endregion

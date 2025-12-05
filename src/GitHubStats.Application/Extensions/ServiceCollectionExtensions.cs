@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TopLanguagesCardService>();
         services.AddScoped<GistCardService>();
         services.AddScoped<WakaTimeCardService>();
+        services.AddScoped<StreakCardService>();
 
         return services;
     }

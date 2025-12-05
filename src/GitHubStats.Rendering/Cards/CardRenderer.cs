@@ -192,6 +192,48 @@ public sealed class CardRenderer : ICardRenderer
         return card.Render(RenderWakaTimeBody(filteredLangs, stats, options, colors, card.Width));
     }
 
+    public string RenderStreakCard(StreakStats stats, StreakCardOptions options)
+    {
+        var colors = ThemeManager.GetColors(
+            options.Theme ?? "default",
+            options.TitleColor,
+            options.TextColor,
+            options.IconColor,
+            options.BgColor,
+            options.BorderColor,
+            options.RingColor);
+
+        var width = options.CardWidth ?? 495;
+        // Desired visual height (what user sees)
+        var visualHeight = options.CardHeight ?? 195;
+        // Card.cs subtracts 30 when HideTitle=true, so we add 30 to compensate
+        var cardHeight = visualHeight + 30;
+
+        // Determine visible sections
+        var visibleSections = 3;
+        if (options.HideTotalContributions) visibleSections--;
+        if (options.HideCurrentStreak) visibleSections--;
+        if (options.HideLongestStreak) visibleSections--;
+
+        var card = new Card
+        {
+            Width = width,
+            Height = cardHeight, // Use compensated height
+            BorderRadius = options.BorderRadius ?? 4.5,
+            Colors = colors,
+            Title = string.Empty, // Streak card doesn't have a header title
+            HideBorder = options.HideBorder,
+            HideTitle = true, // Always hide title for streak card
+            DisableAnimations = options.DisableAnimations,
+            A11yTitle = $"GitHub Streak Stats for {stats.Username}",
+            A11yDesc = $"Total Contributions: {stats.TotalContributions}, Current Streak: {stats.CurrentStreak.Length} days, Longest Streak: {stats.LongestStreak.Length} days"
+        };
+
+        card.CustomCss = GetStreakCardCss(colors, options);
+        // Pass the visual height for internal layout calculations
+        return card.Render(RenderStreakCardBody(stats, options, colors, width, visualHeight, visibleSections));
+    }
+
     public string RenderErrorCard(string message, string? secondaryMessage = null, CardColors? colors = null)
     {
         colors ??= ThemeManager.GetColors();
@@ -770,6 +812,198 @@ public sealed class CardRenderer : ICardRenderer
             >= 1_024 => $"{bytes / 1_024.0:F2} KB",
             _ => $"{bytes} B"
         };
+    }
+
+    #endregion
+
+    #region Private Methods - Streak Card
+
+    private static string GetStreakCardCss(CardColors colors, StreakCardOptions options)
+    {
+        var sideNumsColor = options.SideNumsColor ?? colors.TextColor;
+        var currStreakNumColor = options.CurrStreakNumColor ?? colors.TitleColor;
+        var sideLabelsColor = options.SideLabelsColor ?? colors.TextColor;
+        var currStreakLabelColor = options.CurrStreakLabelColor ?? colors.TextColor;
+        var datesColor = options.DatesColor ?? colors.TextColor;
+        var fireColor = options.FireColor ?? "fb8c00";
+        var ringColor = options.RingColor ?? colors.RingColor ?? colors.TitleColor;
+
+        return $@"
+.stat-value {{ font: 700 28px 'Segoe UI', Ubuntu, Sans-Serif; }}
+.stat-value.side {{ fill: #{sideNumsColor}; }}
+.stat-value.current {{ fill: #{currStreakNumColor}; }}
+.stat-label {{ font: 400 14px 'Segoe UI', Ubuntu, Sans-Serif; }}
+.stat-label.side {{ fill: #{sideLabelsColor}; }}
+.stat-label.current {{ fill: #{currStreakLabelColor}; }}
+.stat-date {{ font: 400 12px 'Segoe UI', Ubuntu, Sans-Serif; fill: #{datesColor}; }}
+.fire {{ fill: #{fireColor}; }}
+.ring {{ stroke: #{ringColor}; }}
+.streak-section {{
+    opacity: 0;
+    animation: fadeInAnimation 0.4s ease-in-out forwards;
+}}
+";
+    }
+
+    private static string RenderStreakCardBody(StreakStats stats, StreakCardOptions options, CardColors colors, int width, int height, int visibleSections)
+    {
+        using var body = new SvgBuilder(4096);
+
+        if (visibleSections == 0) return "";
+
+        var sectionWidth = width / visibleSections;
+        var currentSectionIndex = 0;
+
+        // Body wrapper adds 25px offset, so adjust Y positions accordingly
+        // PHP uses transforms with text y=32, so actual position = transformY + 32
+        const int bodyOffset = 25;
+
+        // Height offset for centering when card height differs from default 195
+        var heightOffset = (height - 195) / 2.0;
+
+        // Y positions for side sections (PHP: transform y=48/84/114 + text y=32 = 80/116/146)
+        var sideNumberY = 48 + heightOffset - bodyOffset + 32;  // 55 → rendered at 80
+        var sideLabelY = 84 + heightOffset - bodyOffset + 32;   // 91 → rendered at 116
+        var sideDateY = 114 + heightOffset - bodyOffset + 32;   // 121 → rendered at 146
+
+        // Y positions for current streak section
+        // Fire and ring don't have the +32 offset (they're SVG elements, not text)
+        var currentFireY = 19.5 + heightOffset - bodyOffset;    // -5.5 → rendered at 19.5
+        var currentRingY = 71 + heightOffset - bodyOffset;      // 46 → rendered at 71
+        // Current streak number is inside ring (transform y=48 + text y=32 = 80)
+        var currentNumberY = 48 + heightOffset - bodyOffset + 32; // 55 → rendered at 80
+        // Current streak label (transform y=108 + text y=32 = 140)
+        var currentLabelY = 108 + heightOffset - bodyOffset + 32; // 115 → rendered at 140
+        // Current streak date (transform y=145 + text y=21 = 166)
+        var currentDateY = 145 + heightOffset - bodyOffset + 21;  // 141 → rendered at 166
+
+        // Divider Y positions (spanning content area)
+        var dividerY1 = 28 + heightOffset - bodyOffset;         // 3 → rendered at 28
+        var dividerY2 = 170 + heightOffset - bodyOffset;        // 145 → rendered at 170
+
+        // Stroke color for dividers
+        var strokeColor = options.StrokeColor ?? colors.TextColor;
+
+        // Total Contributions (left section)
+        if (!options.HideTotalContributions)
+        {
+            var x = sectionWidth * currentSectionIndex + sectionWidth / 2;
+            body.Append(RenderStreakSectionFixed(
+                x,
+                sideNumberY, sideLabelY, sideDateY,
+                stats.TotalContributions.ToString("N0"),
+                "Total Contributions",
+                FormatDateRange(stats.FirstContribution, DateOnly.FromDateTime(DateTime.UtcNow)),
+                "side",
+                currentSectionIndex * 200));
+            currentSectionIndex++;
+
+            // Add divider if not the last section
+            if (currentSectionIndex < visibleSections)
+            {
+                var dividerX = sectionWidth * currentSectionIndex;
+                body.Append($@"<line x1=""{dividerX}"" y1=""{dividerY1:F1}"" x2=""{dividerX}"" y2=""{dividerY2:F1}"" stroke=""#{strokeColor}"" stroke-width=""1"" stroke-opacity=""0.5""/>");
+            }
+        }
+
+        // Current Streak (center section with fire icon and ring)
+        if (!options.HideCurrentStreak)
+        {
+            var x = sectionWidth * currentSectionIndex + sectionWidth / 2;
+            var fireColor = options.FireColor ?? "fb8c00";
+            var ringColor = options.RingColor ?? colors.RingColor ?? colors.TitleColor;
+
+            body.Append(RenderCurrentStreakSectionFixed(
+                x,
+                currentFireY, currentRingY, currentNumberY, currentLabelY, currentDateY,
+                stats.CurrentStreak.Length.ToString(),
+                "Current Streak",
+                FormatDateRange(stats.CurrentStreak.Start, stats.CurrentStreak.End),
+                fireColor,
+                ringColor,
+                currentSectionIndex * 200));
+            currentSectionIndex++;
+
+            // Add divider if not the last section
+            if (currentSectionIndex < visibleSections)
+            {
+                var dividerX = sectionWidth * currentSectionIndex;
+                body.Append($@"<line x1=""{dividerX}"" y1=""{dividerY1:F1}"" x2=""{dividerX}"" y2=""{dividerY2:F1}"" stroke=""#{strokeColor}"" stroke-width=""1"" stroke-opacity=""0.5""/>");
+            }
+        }
+
+        // Longest Streak (right section)
+        if (!options.HideLongestStreak)
+        {
+            var x = sectionWidth * currentSectionIndex + sectionWidth / 2;
+            body.Append(RenderStreakSectionFixed(
+                x,
+                sideNumberY, sideLabelY, sideDateY,
+                stats.LongestStreak.Length.ToString(),
+                "Longest Streak",
+                FormatDateRange(stats.LongestStreak.Start, stats.LongestStreak.End),
+                "side",
+                currentSectionIndex * 200));
+        }
+
+        return body.ToString();
+    }
+
+    private static string RenderStreakSectionFixed(int x, double numberY, double labelY, double dateY, string value, string label, string dateRange, string cssClass, int animationDelay)
+    {
+        return $@"
+<g class=""streak-section"" style=""animation-delay: {animationDelay}ms"">
+    <text class=""stat-value {cssClass}"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(value)}</text>
+    <text class=""stat-label {cssClass}"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(label)}</text>
+    <text class=""stat-date"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(dateRange)}</text>
+</g>";
+    }
+
+    private static string RenderCurrentStreakSectionFixed(int x, double fireY, double ringY, double numberY, double labelY, double dateY, string value, string label, string dateRange, string fireColor, string ringColor, int animationDelay)
+    {
+        // Fire icon - simple flame SVG (positioned at top center of ring)
+        var fireIcon = $@"<svg x=""{x - 10}"" y=""{fireY:F1}"" width=""20"" height=""25"" viewBox=""0 0 24 24"" fill=""#{fireColor}"">
+            <path d=""M12 23C16.1421 23 19.5 19.6421 19.5 15.5C19.5 14.1284 19.1526 12.8394 18.5389 11.7131C17.8634 10.4756 16.8806 9.28395 15.7895 8.17157C15.4043 7.78457 14.9377 7.38 14.4297 6.95C13.3553 6.04395 12.0833 5 11.2929 3.46447L10.5 2L9.70711 3.46447C8.91667 5 7.64474 6.04395 6.57034 6.95C6.06229 7.38 5.59575 7.78457 5.21053 8.17157C4.1194 9.28395 3.13663 10.4756 2.46106 11.7131C1.84737 12.8394 1.5 14.1284 1.5 15.5C1.5 19.6421 4.85786 23 9 23H12Z""/>
+        </svg>";
+
+        // Ring around the current streak number
+        var ring = $@"<circle cx=""{x}"" cy=""{ringY:F1}"" r=""40"" fill=""none"" stroke=""#{ringColor}"" stroke-width=""5"" class=""ring""/>";
+
+        return $@"
+<g class=""streak-section"" style=""animation-delay: {animationDelay}ms"">
+    {fireIcon}
+    {ring}
+    <text class=""stat-value current"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(value)}</text>
+    <text class=""stat-label current"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(label)}</text>
+    <text class=""stat-date"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(dateRange)}</text>
+</g>";
+    }
+
+    private static string FormatDateRange(DateOnly? start, DateOnly? end)
+    {
+        if (!start.HasValue || !end.HasValue)
+            return "No Data";
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        string FormatDate(DateOnly date)
+        {
+            if (date == today)
+                return "Present";
+
+            // Format: "Jan 5" or "Jan 5, 2023" if different year
+            if (date.Year == today.Year)
+                return date.ToString("MMM d");
+            return date.ToString("MMM d, yyyy");
+        }
+
+        var startStr = FormatDate(start.Value);
+        var endStr = FormatDate(end.Value);
+
+        if (start.Value == end.Value)
+            return startStr;
+
+        return $"{startStr} - {endStr}";
     }
 
     #endregion
