@@ -112,9 +112,10 @@ public static class GraphQLQueries
     public const string TopLanguagesQuery = """
         query userInfo($login: String!) {
             user(login: $login) {
-                repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
+                repositories(ownerAffiliations: OWNER, isFork: false, first: 100, orderBy: {field: UPDATED_AT, direction: DESC}) {
                     nodes {
                         name
+                        isArchived
                         languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
                             edges {
                                 size

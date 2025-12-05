@@ -220,6 +220,11 @@ public sealed class GitHubClient : IGitHubClient
 
         foreach (var repo in response.Data.User.Repositories.Nodes)
         {
+            // Skip archived repositories - they typically contain old/inactive code
+            if (repo.IsArchived)
+                continue;
+
+            // Skip explicitly excluded repositories
             if (allExcludedRepos.Contains(repo.Name))
                 continue;
 
@@ -231,7 +236,8 @@ public sealed class GitHubClient : IGitHubClient
 
                 if (languageData.TryGetValue(langName, out var existing))
                 {
-                    languageData[langName] = (langColor, existing.Size + size, existing.Count + 1);
+                    // Preserve the first color encountered for this language
+                    languageData[langName] = (existing.Color, existing.Size + size, existing.Count + 1);
                 }
                 else
                 {
@@ -726,6 +732,7 @@ internal sealed class TopLangsRepositoriesData
 internal sealed class TopLangsRepoNode
 {
     public required string Name { get; set; }
+    public bool IsArchived { get; set; }
     public required TopLangsLanguagesData Languages { get; set; }
 }
 
