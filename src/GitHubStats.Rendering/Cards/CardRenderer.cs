@@ -820,50 +820,41 @@ public sealed class CardRenderer : ICardRenderer
 
     private static string GetStreakCardCss(CardColors colors, StreakCardOptions options)
     {
-        var sideNumsColor = options.SideNumsColor ?? colors.TextColor;
-        var currStreakNumColor = options.CurrStreakNumColor ?? colors.TitleColor; // Accent color for current streak
+        var currStreakNumColor = options.CurrStreakNumColor ?? colors.TitleColor;
         var sideLabelsColor = options.SideLabelsColor ?? colors.TextColor;
-        var currStreakLabelColor = options.CurrStreakLabelColor ?? colors.TextColor;
         var datesColor = options.DatesColor ?? colors.TextColor;
         var fireColor = options.FireColor ?? "ff6b6b";
-        var ringColor = options.RingColor ?? colors.RingColor ?? colors.TitleColor;
         var accentColor = colors.TitleColor;
+        var iconColor = colors.IconColor ?? colors.TitleColor;
 
         return $@"
-/* Modern Typography - Clean and minimal */
+/* Modern Typography - Colorful and symmetric */
 .stat-value {{
-    font: 600 32px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font: 700 28px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: -0.5px;
 }}
-.stat-value.side {{ fill: #{sideNumsColor}; font-size: 26px; }}
-.stat-value.current {{ fill: #{currStreakNumColor}; font-size: 36px; font-weight: 700; }}
+.stat-value.total {{ fill: #{iconColor}; }}
+.stat-value.current {{ fill: #{currStreakNumColor}; font-size: 32px; }}
+.stat-value.longest {{ fill: #{accentColor}; }}
 .stat-label {{
-    font: 500 11px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font: 600 10px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
+    letter-spacing: 1px;
 }}
-.stat-label.side {{ fill: #{sideLabelsColor}; opacity: 0.7; }}
-.stat-label.current {{ fill: #{accentColor}; opacity: 0.9; }}
+.stat-label.total {{ fill: #{iconColor}; opacity: 0.85; }}
+.stat-label.current {{ fill: #{currStreakNumColor}; opacity: 0.85; }}
+.stat-label.longest {{ fill: #{accentColor}; opacity: 0.85; }}
 .stat-date {{
-    font: 400 10px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font: 400 9px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     fill: #{datesColor};
-    opacity: 0.5;
+    opacity: 0.6;
 }}
 .fire {{ fill: #{fireColor}; }}
-.ring {{ stroke: url(#ring-gradient); }}
-.ring-bg {{ stroke: #{colors.TextColor}; opacity: 0.1; }}
 
 /* Section animations */
 .streak-section {{
     opacity: 0;
     animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}}
-
-/* Ring draw animation */
-.ring-anim {{
-    stroke-dasharray: 251.2;
-    stroke-dashoffset: 251.2;
-    animation: drawRing 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }}
 
 /* Number pop animation */
@@ -878,20 +869,9 @@ public sealed class CardRenderer : ICardRenderer
     animation: fadeIn 0.4s ease-out forwards;
 }}
 
-/* Pulse glow for current streak */
-.glow {{
-    animation: pulse 2s ease-in-out infinite;
-}}
-
 @keyframes slideUp {{
     0% {{ opacity: 0; transform: translateY(15px); }}
     100% {{ opacity: 1; transform: translateY(0); }}
-}}
-
-@keyframes drawRing {{
-    0% {{ stroke-dashoffset: 251.2; opacity: 0; }}
-    50% {{ opacity: 1; }}
-    100% {{ stroke-dashoffset: 0; opacity: 1; }}
 }}
 
 @keyframes popIn {{
@@ -904,11 +884,6 @@ public sealed class CardRenderer : ICardRenderer
     0% {{ opacity: 0; }}
     100% {{ opacity: 1; }}
 }}
-
-@keyframes pulse {{
-    0%, 100% {{ filter: drop-shadow(0 0 0 rgba(47, 128, 237, 0)); }}
-    50% {{ filter: drop-shadow(0 0 8px rgba(47, 128, 237, 0.3)); }}
-}}
 ";
     }
 
@@ -918,40 +893,17 @@ public sealed class CardRenderer : ICardRenderer
 
         if (visibleSections == 0) return "";
 
-        // Modern slim layout constants
-        const int margin = 30;
+        // Symmetric layout constants
+        const int margin = 25;
         const int bodyOffset = 25;
         var contentWidth = width - (margin * 2);
         var sectionWidth = contentWidth / visibleSections;
 
-        // Vertical center of card (slim design - more compact)
+        // Symmetric vertical positions (same for all sections)
         var centerY = (height / 2.0) - bodyOffset;
-
-        // Modern ring dimensions (slightly smaller, cleaner)
-        const int ringRadius = 32;
-
-        // Compact Y positions for slim design
-        var sideNumberY = centerY - 12;   // Number centered
-        var sideLabelY = centerY + 20;    // Label below number
-        var sideDateY = centerY + 38;     // Date at bottom
-
-        // Current streak section positions
-        var currentRingY = centerY + 2;
-        var currentNumberY = centerY + 10;
-        var currentLabelY = centerY + 48;
-        var currentDateY = centerY + 64;
-
-        // Accent color for gradient
-        var accentColor = colors.TitleColor;
-        var accentColor2 = colors.IconColor ?? colors.TitleColor;
-
-        // Add gradient definition for modern ring
-        body.Append($@"<defs>
-    <linearGradient id=""ring-gradient"" x1=""0%"" y1=""0%"" x2=""100%"" y2=""100%"">
-        <stop offset=""0%"" stop-color=""#{accentColor}""/>
-        <stop offset=""100%"" stop-color=""#{accentColor2}""/>
-    </linearGradient>
-</defs>");
+        var numberY = centerY - 8;     // Number at top
+        var labelY = centerY + 22;      // Label in middle
+        var dateY = centerY + 38;       // Date at bottom
 
         var currentSectionIndex = 0;
 
@@ -961,29 +913,27 @@ public sealed class CardRenderer : ICardRenderer
             var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
             body.Append(RenderModernSection(
                 x,
-                sideNumberY, sideLabelY, sideDateY,
+                numberY, labelY, dateY,
                 stats.TotalContributions.ToString("N0"),
                 "Total",
                 FormatDateRange(stats.FirstContribution, DateOnly.FromDateTime(DateTime.UtcNow)),
-                "side",
+                "total",
                 currentSectionIndex * 100));
             currentSectionIndex++;
         }
 
-        // Current Streak (center section with modern ring)
+        // Current Streak (center section - no ring, symmetric with others)
         if (!options.HideCurrentStreak)
         {
             var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
-
-            body.Append(RenderModernCurrentStreak(
+            body.Append(RenderModernSection(
                 x,
-                currentRingY, currentNumberY, currentLabelY, currentDateY,
+                numberY, labelY, dateY,
                 stats.CurrentStreak.Length.ToString(),
                 "Current",
                 FormatDateRange(stats.CurrentStreak.Start, stats.CurrentStreak.End),
-                ringRadius,
-                currentSectionIndex * 100,
-                colors));
+                "current",
+                currentSectionIndex * 100));
             currentSectionIndex++;
         }
 
@@ -993,11 +943,11 @@ public sealed class CardRenderer : ICardRenderer
             var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
             body.Append(RenderModernSection(
                 x,
-                sideNumberY, sideLabelY, sideDateY,
+                numberY, labelY, dateY,
                 stats.LongestStreak.Length.ToString(),
                 "Longest",
                 FormatDateRange(stats.LongestStreak.Start, stats.LongestStreak.End),
-                "side",
+                "longest",
                 currentSectionIndex * 100));
         }
 
