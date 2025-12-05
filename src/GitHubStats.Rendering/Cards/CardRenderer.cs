@@ -204,8 +204,8 @@ public sealed class CardRenderer : ICardRenderer
             options.RingColor);
 
         var width = options.CardWidth ?? 495;
-        // Desired visual height (what user sees)
-        var visualHeight = options.CardHeight ?? 195;
+        // Desired visual height (what user sees) - slim modern design
+        var visualHeight = options.CardHeight ?? 150;
         // Card.cs subtracts 30 when HideTitle=true, so we add 30 to compensate
         var cardHeight = visualHeight + 30;
 
@@ -821,26 +821,93 @@ public sealed class CardRenderer : ICardRenderer
     private static string GetStreakCardCss(CardColors colors, StreakCardOptions options)
     {
         var sideNumsColor = options.SideNumsColor ?? colors.TextColor;
-        var currStreakNumColor = options.CurrStreakNumColor ?? colors.TitleColor;
+        var currStreakNumColor = options.CurrStreakNumColor ?? colors.TitleColor; // Accent color for current streak
         var sideLabelsColor = options.SideLabelsColor ?? colors.TextColor;
         var currStreakLabelColor = options.CurrStreakLabelColor ?? colors.TextColor;
         var datesColor = options.DatesColor ?? colors.TextColor;
-        var fireColor = options.FireColor ?? "fb8c00";
+        var fireColor = options.FireColor ?? "ff6b6b";
         var ringColor = options.RingColor ?? colors.RingColor ?? colors.TitleColor;
+        var accentColor = colors.TitleColor;
 
         return $@"
-.stat-value {{ font: 700 28px 'Segoe UI', Ubuntu, Sans-Serif; }}
-.stat-value.side {{ fill: #{sideNumsColor}; }}
-.stat-value.current {{ fill: #{currStreakNumColor}; }}
-.stat-label {{ font: 400 14px 'Segoe UI', Ubuntu, Sans-Serif; }}
-.stat-label.side {{ fill: #{sideLabelsColor}; }}
-.stat-label.current {{ fill: #{currStreakLabelColor}; }}
-.stat-date {{ font: 400 12px 'Segoe UI', Ubuntu, Sans-Serif; fill: #{datesColor}; }}
+/* Modern Typography - Clean and minimal */
+.stat-value {{
+    font: 600 32px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.5px;
+}}
+.stat-value.side {{ fill: #{sideNumsColor}; font-size: 26px; }}
+.stat-value.current {{ fill: #{currStreakNumColor}; font-size: 36px; font-weight: 700; }}
+.stat-label {{
+    font: 500 11px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+}}
+.stat-label.side {{ fill: #{sideLabelsColor}; opacity: 0.7; }}
+.stat-label.current {{ fill: #{accentColor}; opacity: 0.9; }}
+.stat-date {{
+    font: 400 10px 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    fill: #{datesColor};
+    opacity: 0.5;
+}}
 .fire {{ fill: #{fireColor}; }}
-.ring {{ stroke: #{ringColor}; }}
+.ring {{ stroke: url(#ring-gradient); }}
+.ring-bg {{ stroke: #{colors.TextColor}; opacity: 0.1; }}
+
+/* Section animations */
 .streak-section {{
     opacity: 0;
-    animation: fadeInAnimation 0.4s ease-in-out forwards;
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}}
+
+/* Ring draw animation */
+.ring-anim {{
+    stroke-dasharray: 251.2;
+    stroke-dashoffset: 251.2;
+    animation: drawRing 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}}
+
+/* Number pop animation */
+.number-pop {{
+    opacity: 0;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}}
+
+/* Fade in */
+.fade-in {{
+    opacity: 0;
+    animation: fadeIn 0.4s ease-out forwards;
+}}
+
+/* Pulse glow for current streak */
+.glow {{
+    animation: pulse 2s ease-in-out infinite;
+}}
+
+@keyframes slideUp {{
+    0% {{ opacity: 0; transform: translateY(15px); }}
+    100% {{ opacity: 1; transform: translateY(0); }}
+}}
+
+@keyframes drawRing {{
+    0% {{ stroke-dashoffset: 251.2; opacity: 0; }}
+    50% {{ opacity: 1; }}
+    100% {{ stroke-dashoffset: 0; opacity: 1; }}
+}}
+
+@keyframes popIn {{
+    0% {{ opacity: 0; transform: scale(0.5); }}
+    70% {{ transform: scale(1.1); }}
+    100% {{ opacity: 1; transform: scale(1); }}
+}}
+
+@keyframes fadeIn {{
+    0% {{ opacity: 0; }}
+    100% {{ opacity: 1; }}
+}}
+
+@keyframes pulse {{
+    0%, 100% {{ filter: drop-shadow(0 0 0 rgba(47, 128, 237, 0)); }}
+    50% {{ filter: drop-shadow(0 0 8px rgba(47, 128, 237, 0.3)); }}
 }}
 ";
     }
@@ -851,131 +918,120 @@ public sealed class CardRenderer : ICardRenderer
 
         if (visibleSections == 0) return "";
 
-        var sectionWidth = width / visibleSections;
-        var currentSectionIndex = 0;
-
-        // Body wrapper adds 25px offset, so adjust Y positions accordingly
-        // PHP uses transforms with text y=32, so actual position = transformY + 32
+        // Modern slim layout constants
+        const int margin = 30;
         const int bodyOffset = 25;
+        var contentWidth = width - (margin * 2);
+        var sectionWidth = contentWidth / visibleSections;
 
-        // Height offset for centering when card height differs from default 195
-        var heightOffset = (height - 195) / 2.0;
+        // Vertical center of card (slim design - more compact)
+        var centerY = (height / 2.0) - bodyOffset;
 
-        // Y positions for side sections (PHP: transform y=48/84/114 + text y=32 = 80/116/146)
-        var sideNumberY = 48 + heightOffset - bodyOffset + 32;  // 55 → rendered at 80
-        var sideLabelY = 84 + heightOffset - bodyOffset + 32;   // 91 → rendered at 116
-        var sideDateY = 114 + heightOffset - bodyOffset + 32;   // 121 → rendered at 146
+        // Modern ring dimensions (slightly smaller, cleaner)
+        const int ringRadius = 32;
 
-        // Y positions for current streak section
-        // Fire and ring don't have the +32 offset (they're SVG elements, not text)
-        var currentFireY = 19.5 + heightOffset - bodyOffset;    // -5.5 → rendered at 19.5
-        var currentRingY = 71 + heightOffset - bodyOffset;      // 46 → rendered at 71
-        // Current streak number is inside ring (transform y=48 + text y=32 = 80)
-        var currentNumberY = 48 + heightOffset - bodyOffset + 32; // 55 → rendered at 80
-        // Current streak label (transform y=108 + text y=32 = 140)
-        var currentLabelY = 108 + heightOffset - bodyOffset + 32; // 115 → rendered at 140
-        // Current streak date (transform y=145 + text y=21 = 166)
-        var currentDateY = 145 + heightOffset - bodyOffset + 21;  // 141 → rendered at 166
+        // Compact Y positions for slim design
+        var sideNumberY = centerY - 12;   // Number centered
+        var sideLabelY = centerY + 20;    // Label below number
+        var sideDateY = centerY + 38;     // Date at bottom
 
-        // Divider Y positions (spanning content area)
-        var dividerY1 = 28 + heightOffset - bodyOffset;         // 3 → rendered at 28
-        var dividerY2 = 170 + heightOffset - bodyOffset;        // 145 → rendered at 170
+        // Current streak section positions
+        var currentRingY = centerY + 2;
+        var currentNumberY = centerY + 10;
+        var currentLabelY = centerY + 48;
+        var currentDateY = centerY + 64;
 
-        // Stroke color for dividers
-        var strokeColor = options.StrokeColor ?? colors.TextColor;
+        // Accent color for gradient
+        var accentColor = colors.TitleColor;
+        var accentColor2 = colors.IconColor ?? colors.TitleColor;
+
+        // Add gradient definition for modern ring
+        body.Append($@"<defs>
+    <linearGradient id=""ring-gradient"" x1=""0%"" y1=""0%"" x2=""100%"" y2=""100%"">
+        <stop offset=""0%"" stop-color=""#{accentColor}""/>
+        <stop offset=""100%"" stop-color=""#{accentColor2}""/>
+    </linearGradient>
+</defs>");
+
+        var currentSectionIndex = 0;
 
         // Total Contributions (left section)
         if (!options.HideTotalContributions)
         {
-            var x = sectionWidth * currentSectionIndex + sectionWidth / 2;
-            body.Append(RenderStreakSectionFixed(
+            var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
+            body.Append(RenderModernSection(
                 x,
                 sideNumberY, sideLabelY, sideDateY,
                 stats.TotalContributions.ToString("N0"),
-                "Total Contributions",
+                "Total",
                 FormatDateRange(stats.FirstContribution, DateOnly.FromDateTime(DateTime.UtcNow)),
                 "side",
-                currentSectionIndex * 200));
+                currentSectionIndex * 100));
             currentSectionIndex++;
-
-            // Add divider if not the last section
-            if (currentSectionIndex < visibleSections)
-            {
-                var dividerX = sectionWidth * currentSectionIndex;
-                body.Append($@"<line x1=""{dividerX}"" y1=""{dividerY1:F1}"" x2=""{dividerX}"" y2=""{dividerY2:F1}"" stroke=""#{strokeColor}"" stroke-width=""1"" stroke-opacity=""0.5""/>");
-            }
         }
 
-        // Current Streak (center section with fire icon and ring)
+        // Current Streak (center section with modern ring)
         if (!options.HideCurrentStreak)
         {
-            var x = sectionWidth * currentSectionIndex + sectionWidth / 2;
-            var fireColor = options.FireColor ?? "fb8c00";
-            var ringColor = options.RingColor ?? colors.RingColor ?? colors.TitleColor;
+            var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
 
-            body.Append(RenderCurrentStreakSectionFixed(
+            body.Append(RenderModernCurrentStreak(
                 x,
-                currentFireY, currentRingY, currentNumberY, currentLabelY, currentDateY,
+                currentRingY, currentNumberY, currentLabelY, currentDateY,
                 stats.CurrentStreak.Length.ToString(),
-                "Current Streak",
+                "Current",
                 FormatDateRange(stats.CurrentStreak.Start, stats.CurrentStreak.End),
-                fireColor,
-                ringColor,
-                currentSectionIndex * 200));
+                ringRadius,
+                currentSectionIndex * 100,
+                colors));
             currentSectionIndex++;
-
-            // Add divider if not the last section
-            if (currentSectionIndex < visibleSections)
-            {
-                var dividerX = sectionWidth * currentSectionIndex;
-                body.Append($@"<line x1=""{dividerX}"" y1=""{dividerY1:F1}"" x2=""{dividerX}"" y2=""{dividerY2:F1}"" stroke=""#{strokeColor}"" stroke-width=""1"" stroke-opacity=""0.5""/>");
-            }
         }
 
         // Longest Streak (right section)
         if (!options.HideLongestStreak)
         {
-            var x = sectionWidth * currentSectionIndex + sectionWidth / 2;
-            body.Append(RenderStreakSectionFixed(
+            var x = margin + (sectionWidth * currentSectionIndex) + (sectionWidth / 2);
+            body.Append(RenderModernSection(
                 x,
                 sideNumberY, sideLabelY, sideDateY,
                 stats.LongestStreak.Length.ToString(),
-                "Longest Streak",
+                "Longest",
                 FormatDateRange(stats.LongestStreak.Start, stats.LongestStreak.End),
                 "side",
-                currentSectionIndex * 200));
+                currentSectionIndex * 100));
         }
 
         return body.ToString();
     }
 
-    private static string RenderStreakSectionFixed(int x, double numberY, double labelY, double dateY, string value, string label, string dateRange, string cssClass, int animationDelay)
+    private static string RenderModernSection(int x, double numberY, double labelY, double dateY, string value, string label, string dateRange, string cssClass, int animationDelay)
     {
         return $@"
 <g class=""streak-section"" style=""animation-delay: {animationDelay}ms"">
-    <text class=""stat-value {cssClass}"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(value)}</text>
-    <text class=""stat-label {cssClass}"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(label)}</text>
-    <text class=""stat-date"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(dateRange)}</text>
+    <text class=""stat-value number-pop {cssClass}"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 50}ms"">{HttpUtility.HtmlEncode(value)}</text>
+    <text class=""stat-label fade-in {cssClass}"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 100}ms"">{HttpUtility.HtmlEncode(label)}</text>
+    <text class=""stat-date fade-in"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 150}ms"">{HttpUtility.HtmlEncode(dateRange)}</text>
 </g>";
     }
 
-    private static string RenderCurrentStreakSectionFixed(int x, double fireY, double ringY, double numberY, double labelY, double dateY, string value, string label, string dateRange, string fireColor, string ringColor, int animationDelay)
+    private static string RenderModernCurrentStreak(int x, double ringY, double numberY, double labelY, double dateY, string value, string label, string dateRange, int ringRadius, int animationDelay, CardColors colors)
     {
-        // Fire icon - simple flame SVG (positioned at top center of ring)
-        var fireIcon = $@"<svg x=""{x - 10}"" y=""{fireY:F1}"" width=""20"" height=""25"" viewBox=""0 0 24 24"" fill=""#{fireColor}"">
-            <path d=""M12 23C16.1421 23 19.5 19.6421 19.5 15.5C19.5 14.1284 19.1526 12.8394 18.5389 11.7131C17.8634 10.4756 16.8806 9.28395 15.7895 8.17157C15.4043 7.78457 14.9377 7.38 14.4297 6.95C13.3553 6.04395 12.0833 5 11.2929 3.46447L10.5 2L9.70711 3.46447C8.91667 5 7.64474 6.04395 6.57034 6.95C6.06229 7.38 5.59575 7.78457 5.21053 8.17157C4.1194 9.28395 3.13663 10.4756 2.46106 11.7131C1.84737 12.8394 1.5 14.1284 1.5 15.5C1.5 19.6421 4.85786 23 9 23H12Z""/>
-        </svg>";
+        // Modern gradient ring with animated draw effect
+        var circumference = 2 * Math.PI * ringRadius;
 
-        // Ring around the current streak number
-        var ring = $@"<circle cx=""{x}"" cy=""{ringY:F1}"" r=""40"" fill=""none"" stroke=""#{ringColor}"" stroke-width=""5"" class=""ring""/>";
+        // Background ring (subtle)
+        var ringBg = $@"<circle cx=""{x}"" cy=""{ringY:F1}"" r=""{ringRadius}"" fill=""none"" stroke=""#{colors.TextColor}"" stroke-width=""3"" stroke-opacity=""0.08""/>";
+
+        // Animated gradient ring
+        var ring = $@"<circle cx=""{x}"" cy=""{ringY:F1}"" r=""{ringRadius}"" fill=""none"" class=""ring ring-anim glow"" stroke-width=""3"" stroke-linecap=""round"" transform=""rotate(-90 {x} {ringY:F1})"" style=""animation-delay: {animationDelay + 100}ms""/>";
 
         return $@"
 <g class=""streak-section"" style=""animation-delay: {animationDelay}ms"">
-    {fireIcon}
+    {ringBg}
     {ring}
-    <text class=""stat-value current"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(value)}</text>
-    <text class=""stat-label current"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(label)}</text>
-    <text class=""stat-date"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"">{HttpUtility.HtmlEncode(dateRange)}</text>
+    <text class=""stat-value number-pop current"" x=""{x}"" y=""{numberY:F1}"" text-anchor=""middle"" dominant-baseline=""middle"" style=""animation-delay: {animationDelay + 200}ms"">{HttpUtility.HtmlEncode(value)}</text>
+    <text class=""stat-label fade-in current"" x=""{x}"" y=""{labelY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 300}ms"">{HttpUtility.HtmlEncode(label)}</text>
+    <text class=""stat-date fade-in"" x=""{x}"" y=""{dateY:F1}"" text-anchor=""middle"" style=""animation-delay: {animationDelay + 350}ms"">{HttpUtility.HtmlEncode(dateRange)}</text>
 </g>";
     }
 
