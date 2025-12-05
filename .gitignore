@@ -13,3 +13,6 @@
 /src/GitHubStats.Domain/obj
 /src/.idea
 /src/.vs
+src/GitHubStats.Api/Properties/PublishProfiles/FolderProfile.pubxml.user
+src/GitHubStats.Api/GitHubStats.Api.csproj.user
+src/GitHubStats.Api/Properties/PublishProfiles/FolderProfile.pubxml
