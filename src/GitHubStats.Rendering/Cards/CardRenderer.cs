@@ -500,9 +500,11 @@ public sealed class CardRenderer : ICardRenderer
             body.Append($@"<text class=""lang-name"" x=""2"" y=""15"">{HttpUtility.HtmlEncode(lang.Name)}</text>");
             body.Append($@"<text class=""lang-name"" x=""{width - 120}"" y=""34"">{displayValue}</text>");
 
-            // Progress bar
+            // Progress bar - ensure percentage is never negative or exceeds 100%
             var progressWidth = width - 120;
-            var progress = percent * progressWidth / 100;
+            var safePercent = Math.Max(0, Math.Min(100, percent));
+            var progress = progressWidth * safePercent / 100;
+            
             body.Rect(0, 25, progressWidth, 8, fill: "#ddd", rx: 5);
             body.Rect(0, 25, progress, 8, fill: lang.Color, rx: 5);
 
@@ -520,19 +522,36 @@ public sealed class CardRenderer : ICardRenderer
     {
         using var body = new SvgBuilder(2048);
 
-        // Progress bar
+        // Progress bar - proportional segment allocation
         var barWidth = width - 75;
         body.Append($@"<mask id=""rect-mask""><rect x=""0"" y=""0"" width=""{barWidth}"" height=""8"" fill=""white"" rx=""5""/></mask>");
 
-        var progressX = 0.0;
-        foreach (var lang in langs)
+        // Calculate proportional widths for each language segment
+        var segments = new List<(int LanguageIndex, double Width)>();
+        double progressX = 0;
+
+        for (var i = 0; i < langs.Count; i++)
         {
+            var lang = langs[i];
             var percent = totalSize > 0 ? (double)lang.Size / totalSize : 0;
             var segmentWidth = barWidth * percent;
-            if (segmentWidth < 10) segmentWidth = 10;
 
-            body.Rect(progressX, 0, segmentWidth, 8, fill: lang.Color);
-            progressX += segmentWidth;
+            // Ensure minimum visibility (2px) for very small segments, but don't exceed bar width
+            if (segmentWidth < 2 && percent > 0)
+                segmentWidth = 2;
+
+            // Clamp to available remaining width
+            var remainingWidth = barWidth - progressX;
+            if (segmentWidth > remainingWidth)
+                segmentWidth = remainingWidth;
+
+            if (segmentWidth > 0)
+            {
+                body.Rect(progressX, 0, segmentWidth, 8, fill: lang.Color);
+                progressX += segmentWidth;
+            }
+
+            segments.Add((i, segmentWidth));
         }
 
         // Language labels in two columns
