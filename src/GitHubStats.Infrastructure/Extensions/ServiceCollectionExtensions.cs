@@ -2,7 +2,6 @@ using GitHubStats.Domain.Interfaces;
 using GitHubStats.Infrastructure.Caching;
 using GitHubStats.Infrastructure.Configuration;
 using GitHubStats.Infrastructure.GitHub;
-using GitHubStats.Infrastructure.WakaTime;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
@@ -51,21 +50,6 @@ public static class ServiceCollectionExtensions
 
             // Total request timeout
             options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(60);
-        });
-
-        // WakaTime client with resilience
-        services.AddHttpClient<IWakaTimeClient, WakaTimeClient>("WakaTime", client =>
-        {
-            client.DefaultRequestHeaders.Add("User-Agent", "GitHubStats");
-            client.Timeout = TimeSpan.FromSeconds(30);
-        })
-        .AddStandardResilienceHandler(options =>
-        {
-            options.Retry.MaxRetryAttempts = 2;
-            options.Retry.Delay = TimeSpan.FromMilliseconds(500);
-            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
-            options.CircuitBreaker.FailureRatio = 0.5;
-            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
         });
 
         // Caching

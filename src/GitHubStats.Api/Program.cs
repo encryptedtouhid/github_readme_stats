@@ -112,11 +112,6 @@ builder.Services.AddOutputCache(options =>
         policy.Expire(TimeSpan.FromDays(2))
               .Tag("gist"));
 
-    // WakaTime card cache policy
-    options.AddPolicy("WakaTimeCard", policy =>
-        policy.Expire(TimeSpan.FromHours(12))
-              .Tag("wakatime"));
-
     // Streak card cache policy
     options.AddPolicy("StreakCard", policy =>
         policy.Expire(TimeSpan.FromHours(3))
@@ -181,7 +176,6 @@ app.MapStatsEndpoint();
 app.MapRepoEndpoint();
 app.MapTopLangsEndpoint();
 app.MapGistEndpoint();
-app.MapWakaTimeEndpoint();
 app.MapStreakEndpoint();
 
 // Status endpoints

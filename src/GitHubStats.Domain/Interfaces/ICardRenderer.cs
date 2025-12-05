@@ -28,11 +28,6 @@ public interface ICardRenderer
     string RenderGistCard(Gist gist, GistCardOptions options);
 
     /// <summary>
-    /// Renders a WakaTime card SVG.
-    /// </summary>
-    string RenderWakaTimeCard(WakaTimeStats stats, WakaTimeCardOptions options);
-
-    /// <summary>
     /// Renders a streak card SVG.
     /// </summary>
     string RenderStreakCard(StreakStats stats, StreakCardOptions options);
@@ -123,20 +118,6 @@ public record TopLanguagesCardOptions : CardOptions
 public record GistCardOptions : CardOptions
 {
     public bool ShowOwner { get; init; }
-}
-
-/// <summary>
-/// WakaTime card specific options.
-/// </summary>
-public record WakaTimeCardOptions : CardOptions
-{
-    public IReadOnlyList<string>? Hide { get; init; }
-    public string Layout { get; init; } = "default";
-    public int? LangsCount { get; init; }
-    public int? CardWidth { get; init; }
-    public int? LineHeight { get; init; }
-    public bool HideProgress { get; init; }
-    public string DisplayFormat { get; init; } = "time";
 }
 
 /// <summary>

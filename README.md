@@ -9,7 +9,6 @@ A .NET 9 Web API that generates customizable SVG cards displaying GitHub user an
 - **Top Languages Card** - Most used programming languages
 - **Repository Card** - Pinned repository information
 - **Gist Card** - Gist statistics
-- **WakaTime Card** - Coding activity stats
 
 ## Prerequisites
 
@@ -39,7 +38,6 @@ The API will be available at `http://localhost:5042`.
 | `/api/top-langs?username={user}` | Top languages card |
 | `/api/pin?username={user}&repo={repo}` | Repository pin card |
 | `/api/gist?id={gist_id}` | Gist card |
-| `/api/wakatime?username={user}` | WakaTime stats card |
 | `/health` | Health check |
 
 ## Usage
