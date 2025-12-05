@@ -147,51 +147,6 @@ public sealed class CardRenderer : ICardRenderer
         return card.Render(RenderGistCardBody(gist, wrappedDesc, height, colors));
     }
 
-    public string RenderWakaTimeCard(WakaTimeStats stats, WakaTimeCardOptions options)
-    {
-        var colors = ThemeManager.GetColors(
-            options.Theme,
-            options.TitleColor,
-            options.TextColor,
-            options.IconColor,
-            options.BgColor,
-            options.BorderColor);
-
-        var langsCount = Math.Min(options.LangsCount ?? stats.Languages.Count, 20);
-        var filteredLangs = FilterWakaTimeLanguages(stats.Languages, options.Hide, langsCount);
-
-        var lineHeight = options.LineHeight ?? 25;
-        var height = Math.Max(45 + (filteredLangs.Count + 1) * lineHeight, 150);
-
-        if (options.Layout == "compact")
-        {
-            height = 90 + (int)Math.Ceiling(filteredLangs.Count / 2.0) * 25;
-        }
-
-        var title = "WakaTime Stats";
-        if (stats.Range == "last_7_days")
-            title += " (Last 7 Days)";
-        else if (stats.Range == "last_year")
-            title += " (Last Year)";
-
-        var card = new Card
-        {
-            Width = options.CardWidth ?? 495,
-            Height = height,
-            BorderRadius = options.BorderRadius ?? 4.5,
-            Colors = colors,
-            Title = options.CustomTitle ?? title,
-            HideBorder = options.HideBorder,
-            HideTitle = options.HideTitle,
-            DisableAnimations = options.DisableAnimations,
-            A11yTitle = "WakaTime Stats",
-            A11yDesc = string.Join(", ", filteredLangs.Select(l => $"{l.Name}: {l.Text}"))
-        };
-
-        card.CustomCss = GetWakaTimeCardCss(colors);
-        return card.Render(RenderWakaTimeBody(filteredLangs, stats, options, colors, card.Width));
-    }
-
     public string RenderStreakCard(StreakStats stats, StreakCardOptions options)
     {
         var colors = ThemeManager.GetColors(
@@ -666,83 +621,6 @@ public sealed class CardRenderer : ICardRenderer
 
         body.EndGroup();
 
-        return body.ToString();
-    }
-
-    #endregion
-
-    #region Private Methods - WakaTime Card
-
-    private static string GetWakaTimeCardCss(CardColors colors)
-    {
-        return $@"
-.stat {{ font: 600 14px 'Segoe UI', Ubuntu, Sans-Serif; fill: #{colors.TextColor}; }}
-.stat.bold {{ font-weight: 700; }}
-.stagger {{ opacity: 0; animation: fadeInAnimation 0.3s ease-in-out forwards; }}
-.lang-name {{ font: 400 11px 'Segoe UI', Ubuntu, Sans-Serif; fill: #{colors.TextColor}; }}
-";
-    }
-
-    private static List<WakaTimeLanguage> FilterWakaTimeLanguages(IReadOnlyList<WakaTimeLanguage> langs, IReadOnlyList<string>? hide, int count)
-    {
-        var filtered = langs.Where(l => l.Hours > 0 || l.Minutes > 0);
-        if (hide?.Count > 0)
-        {
-            var hideSet = new HashSet<string>(hide, StringComparer.OrdinalIgnoreCase);
-            filtered = filtered.Where(l => !hideSet.Contains(l.Name));
-        }
-        return filtered.Take(count).ToList();
-    }
-
-    private static string RenderWakaTimeBody(List<WakaTimeLanguage> langs, WakaTimeStats stats, WakaTimeCardOptions options, CardColors colors, int width)
-    {
-        if (langs.Count == 0)
-        {
-            var message = !stats.IsCodingActivityVisible
-                ? "Coding Activity not publicly visible"
-                : !stats.IsOtherUsageVisible
-                    ? "Code details not available"
-                    : "No coding activity this week";
-
-            return $@"<text x=""25"" y=""11"" class=""stat bold"" fill=""#{colors.TextColor}"">{message}</text>";
-        }
-
-        using var body = new SvgBuilder(2048);
-        body.Append(@"<svg x=""0"" y=""0"" width=""100%"">");
-
-        var y = 0;
-        var staggerDelay = 450;
-        var lineHeight = options.LineHeight ?? 25;
-
-        foreach (var lang in langs)
-        {
-            var value = options.DisplayFormat == "percent"
-                ? $"{lang.Percent:F2} %"
-                : lang.Text ?? $"{lang.Hours}h {lang.Minutes}m";
-
-            body.Append($@"<g class=""stagger"" style=""animation-delay: {staggerDelay}ms"" transform=""translate(25, {y})"">");
-            body.Append($@"<text class=""stat bold"" y=""12.5"">{HttpUtility.HtmlEncode(lang.Name)}:</text>");
-
-            if (!options.HideProgress)
-            {
-                var progressWidth = width - 275;
-                var progress = lang.Percent * progressWidth / 100;
-                body.Rect(110, 4, progressWidth, 8, fill: $"#{colors.TextColor}10", rx: 5);
-                body.Rect(110, 4, progress, 8, fill: $"#{colors.TitleColor}", rx: 5);
-                body.Append($@"<text class=""stat"" x=""{130 + progressWidth}"" y=""12.5"">{value}</text>");
-            }
-            else
-            {
-                body.Append($@"<text class=""stat"" x=""170"" y=""12.5"">{value}</text>");
-            }
-
-            body.Append("</g>");
-
-            y += lineHeight;
-            staggerDelay += 150;
-        }
-
-        body.Append("</svg>");
         return body.ToString();
     }
 

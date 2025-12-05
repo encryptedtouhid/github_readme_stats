@@ -38,11 +38,6 @@ public sealed class CacheOptions
     public int GistCardTtlSeconds { get; set; } = 172800; // 2 days
 
     /// <summary>
-    /// Default cache duration for WakaTime cards in seconds.
-    /// </summary>
-    public int WakaTimeCardTtlSeconds { get; set; } = 86400; // 1 day
-
-    /// <summary>
     /// Cache duration for error responses in seconds.
     /// </summary>
     public int ErrorTtlSeconds { get; set; } = 600; // 10 minutes
