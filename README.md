@@ -45,7 +45,7 @@ The API will be available at `http://localhost:5042`.
 Add to your GitHub README:
 
 ```markdown
-![GitHub Streak](https://your-domain.com/api/streak?username=YOUR_USERNAME)
+![GitHub Streak](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid)
 ```
 
 ### Streak Card Options
@@ -62,23 +62,23 @@ Add to your GitHub README:
 Use the `theme` parameter to customize your card:
 
 ```markdown
-![GitHub Streak](https://your-domain.com/api/streak?username=YOUR_USERNAME&theme=tokyonight)
+![GitHub Streak](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=tokyonight)
 ```
 
 #### Theme Examples
 
 | Theme | Preview |
 |-------|---------|
-| `github_light` | ![github_light](https://your-domain.com/api/streak?username=torvalds&theme=github_light) |
-| `github_dark` | ![github_dark](https://your-domain.com/api/streak?username=torvalds&theme=github_dark) |
-| `tokyonight` | ![tokyonight](https://your-domain.com/api/streak?username=torvalds&theme=tokyonight) |
-| `dracula` | ![dracula](https://your-domain.com/api/streak?username=torvalds&theme=dracula) |
-| `nord` | ![nord](https://your-domain.com/api/streak?username=torvalds&theme=nord) |
-| `radical` | ![radical](https://your-domain.com/api/streak?username=torvalds&theme=radical) |
-| `sunset_dark` | ![sunset_dark](https://your-domain.com/api/streak?username=torvalds&theme=sunset_dark) |
-| `ocean_deep` | ![ocean_deep](https://your-domain.com/api/streak?username=torvalds&theme=ocean_deep) |
-| `cyber` | ![cyber](https://your-domain.com/api/streak?username=torvalds&theme=cyber) |
-| `aurora` | ![aurora](https://your-domain.com/api/streak?username=torvalds&theme=aurora) |
+| `github_light` | ![github_light](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=github_light) |
+| `github_dark` | ![github_dark](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=github_dark) |
+| `tokyonight` | ![tokyonight](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=tokyonight) |
+| `dracula` | ![dracula](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=dracula) |
+| `nord` | ![nord](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=nord) |
+| `radical` | ![radical](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=radical) |
+| `sunset_dark` | ![sunset_dark](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=sunset_dark) |
+| `ocean_deep` | ![ocean_deep](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=ocean_deep) |
+| `cyber` | ![cyber](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=cyber) |
+| `aurora` | ![aurora](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=aurora) |
 
 #### GitHub Themes
 
