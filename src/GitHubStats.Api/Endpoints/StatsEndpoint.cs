@@ -95,7 +95,7 @@ public static class StatsEndpoint
                     cancellationToken);
 
                 // Set cache headers
-                SetCacheHeaders(context, cacheSeconds ?? 86400);
+                SetCacheHeaders(context, cacheSeconds ?? 1800);
 
                 context.Response.ContentType = "image/svg+xml";
                 return Results.Content(svg, "image/svg+xml");

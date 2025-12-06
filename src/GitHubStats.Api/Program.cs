@@ -94,27 +94,27 @@ builder.Services.AddOutputCache(options =>
 {
     // Stats card cache policy
     options.AddPolicy("StatsCard", policy =>
-        policy.Expire(TimeSpan.FromHours(12))
+        policy.Expire(TimeSpan.FromMinutes(30))
               .Tag("stats"));
 
     // Top languages card cache policy
     options.AddPolicy("TopLangsCard", policy =>
-        policy.Expire(TimeSpan.FromDays(6))
+        policy.Expire(TimeSpan.FromMinutes(30))
               .Tag("langs"));
 
     // Repo pin card cache policy
     options.AddPolicy("RepoCard", policy =>
-        policy.Expire(TimeSpan.FromDays(10))
+        policy.Expire(TimeSpan.FromMinutes(30))
               .Tag("repo"));
 
     // Gist card cache policy
     options.AddPolicy("GistCard", policy =>
-        policy.Expire(TimeSpan.FromDays(2))
+        policy.Expire(TimeSpan.FromMinutes(30))
               .Tag("gist"));
 
     // Streak card cache policy
     options.AddPolicy("StreakCard", policy =>
-        policy.Expire(TimeSpan.FromHours(3))
+        policy.Expire(TimeSpan.FromMinutes(30))
               .Tag("streak"));
 });
 

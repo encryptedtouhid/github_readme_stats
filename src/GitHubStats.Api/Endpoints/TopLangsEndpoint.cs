@@ -101,7 +101,7 @@ public static class TopLangsEndpoint
                     cacheSeconds.HasValue ? TimeSpan.FromSeconds(cacheSeconds.Value) : null,
                     cancellationToken);
 
-                SetCacheHeaders(context, cacheSeconds ?? 518400);
+                SetCacheHeaders(context, cacheSeconds ?? 1800);
 
                 context.Response.ContentType = "image/svg+xml";
                 return Results.Content(svg, "image/svg+xml");
