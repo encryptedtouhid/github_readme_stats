@@ -350,78 +350,43 @@ public sealed class GitHubClient : IGitHubClient
         var currentYear = DateTime.UtcNow.Year;
         var minYear = startingYear ?? 2005; // Git was created in 2005
 
-        // Collect all contribution days from all years
-        var allContributions = new List<(DateOnly Date, int Count)>();
-        var totalContributions = 0;
-        DateOnly? userCreatedAt = null;
-
-        for (var year = minYear; year <= currentYear; year++)
+        // First, fetch the user's creation date to optimize the year range
+        var userCreatedYear = await GetUserCreatedYearAsync(username, cancellationToken);
+        if (!startingYear.HasValue && userCreatedYear.HasValue)
         {
-            var fromDate = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            var toDate = year == currentYear
-                ? DateTime.UtcNow
-                : new DateTime(year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+            minYear = Math.Max(minYear, userCreatedYear.Value);
+        }
 
-            var variables = new Dictionary<string, object?>
+        // Build list of years to fetch
+        var yearsToFetch = Enumerable.Range(minYear, currentYear - minYear + 1).ToList();
+
+        // Use batched GraphQL queries - fetch up to 5 years per request in parallel
+        const int batchSize = 5;
+        var batches = yearsToFetch
+            .Select((year, index) => new { year, index })
+            .GroupBy(x => x.index / batchSize)
+            .Select(g => g.Select(x => x.year).ToList())
+            .ToList();
+
+        // Execute batched queries in parallel
+        var batchTasks = batches.Select(batch => FetchBatchedContributionsAsync(username, batch, currentYear, cancellationToken)).ToList();
+        var batchResults = await Task.WhenAll(batchTasks);
+
+        // Aggregate results - contributions are already sorted per year, merge them
+        var allContributions = new List<(DateOnly Date, int Count)>(yearsToFetch.Count * 366);
+        var totalContributions = 0;
+
+        foreach (var batchResult in batchResults.Where(r => r != null))
+        {
+            foreach (var yearResult in batchResult!)
             {
-                ["login"] = username,
-                ["from"] = fromDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                ["to"] = toDate.ToString("yyyy-MM-ddTHH:mm:ssZ")
-            };
-
-            try
-            {
-                var response = await ExecuteGraphQLAsync<ContributionCalendarResponse>(
-                    GraphQLQueries.ContributionCalendarQuery,
-                    variables,
-                    cancellationToken);
-
-                if (response.Data?.User == null)
-                {
-                    throw new UserNotFoundException(username);
-                }
-
-                // Get user creation date from first successful request
-                if (!userCreatedAt.HasValue && response.Data.User.CreatedAt != null)
-                {
-                    if (DateTime.TryParse(response.Data.User.CreatedAt, out var createdDate))
-                    {
-                        userCreatedAt = DateOnly.FromDateTime(createdDate);
-                        // Update minYear based on account creation if no starting year was specified
-                        if (!startingYear.HasValue)
-                        {
-                            minYear = Math.Max(minYear, createdDate.Year);
-                        }
-                    }
-                }
-
-                var calendar = response.Data.User.ContributionsCollection.ContributionCalendar;
-                totalContributions += calendar.TotalContributions;
-
-                foreach (var week in calendar.Weeks)
-                {
-                    foreach (var day in week.ContributionDays)
-                    {
-                        if (DateOnly.TryParse(day.Date, out var date))
-                        {
-                            allContributions.Add((date, day.ContributionCount));
-                        }
-                    }
-                }
-            }
-            catch (UserNotFoundException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to fetch contributions for year {Year}", year);
-                // Continue with other years
+                totalContributions += yearResult.TotalContributions;
+                allContributions.AddRange(yearResult.Contributions);
             }
         }
 
-        // Sort contributions by date
-        allContributions = allContributions.OrderBy(c => c.Date).ToList();
+        // Sort once after merging all years (required since batched fetch doesn't guarantee order)
+        allContributions.Sort((a, b) => a.Date.CompareTo(b.Date));
 
         // Calculate streaks
         var (currentStreak, longestStreak, firstContribution) = CalculateStreaks(allContributions);
@@ -434,6 +399,103 @@ public sealed class GitHubClient : IGitHubClient
             LongestStreak = longestStreak,
             FirstContribution = firstContribution
         };
+    }
+
+    private async Task<int?> GetUserCreatedYearAsync(string username, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var variables = new Dictionary<string, object?>
+            {
+                ["login"] = username
+            };
+
+            var response = await ExecuteGraphQLAsync<UserCreatedAtResponse>(
+                GraphQLQueries.UserCreatedAtQuery,
+                variables,
+                cancellationToken);
+
+            if (response.Data?.User?.CreatedAt != null &&
+                DateTime.TryParse(response.Data.User.CreatedAt, out var createdDate))
+            {
+                return createdDate.Year;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch user creation date for {Username}", username);
+        }
+
+        return null;
+    }
+
+    private async Task<List<(int TotalContributions, List<(DateOnly Date, int Count)> Contributions)>?> FetchBatchedContributionsAsync(
+        string username,
+        List<int> years,
+        int currentYear,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Build year ranges for the batched query
+            var yearRanges = years.Select(year =>
+            {
+                var fromDate = new DateTime(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                var toDate = year == currentYear
+                    ? DateTime.UtcNow
+                    : new DateTime(year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+                return (year, fromDate.ToString("yyyy-MM-ddTHH:mm:ssZ"), toDate.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+            }).ToList();
+
+            var query = GraphQLQueries.GenerateBatchedContributionQuery(yearRanges);
+            var variables = new Dictionary<string, object?>
+            {
+                ["login"] = username
+            };
+
+            var response = await ExecuteGraphQLAsync<BatchedContributionResponse>(query, variables, cancellationToken);
+
+            if (response.Data?.User == null)
+            {
+                throw new UserNotFoundException(username);
+            }
+
+            var results = new List<(int TotalContributions, List<(DateOnly Date, int Count)> Contributions)>();
+
+            foreach (var year in years)
+            {
+                var yearKey = $"y{year}";
+                if (response.Data.User.YearlyContributions.TryGetValue(yearKey, out var collection) && collection != null)
+                {
+                    var calendar = collection.ContributionCalendar;
+                    var contributions = new List<(DateOnly Date, int Count)>(calendar.Weeks.Count * 7);
+
+                    foreach (var week in calendar.Weeks)
+                    {
+                        foreach (var day in week.ContributionDays)
+                        {
+                            if (DateOnly.TryParse(day.Date, out var date))
+                            {
+                                contributions.Add((date, day.ContributionCount));
+                            }
+                        }
+                    }
+
+                    results.Add((calendar.TotalContributions, contributions));
+                }
+            }
+
+            return results;
+        }
+        catch (UserNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch batched contributions for years {Years}", string.Join(", ", years));
+            return null;
+        }
     }
 
     private static (StreakInfo Current, StreakInfo Longest, DateOnly? FirstContribution) CalculateStreaks(
@@ -449,20 +511,29 @@ public sealed class GitHubClient : IGitHubClient
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        // Sort contributions by date and dedupe - take max count per date
-        var sortedContributions = contributions
-            .GroupBy(c => c.Date)
-            .Select(g => (Date: g.Key, Count: g.Max(c => c.Count)))
-            .OrderBy(c => c.Date)
-            .ToList();
-
-        // Find first contribution date
-        DateOnly? firstContribution = null;
-        foreach (var c in sortedContributions)
+        // Data is already sorted from the caller, just need to dedupe by taking max count per date
+        // Use a dictionary for O(1) lookup instead of GroupBy which is O(n)
+        var contributionsByDate = new Dictionary<DateOnly, int>(contributions.Count);
+        foreach (var (date, count) in contributions)
         {
-            if (c.Count > 0)
+            if (contributionsByDate.TryGetValue(date, out var existing))
             {
-                firstContribution = c.Date;
+                if (count > existing)
+                    contributionsByDate[date] = count;
+            }
+            else
+            {
+                contributionsByDate[date] = count;
+            }
+        }
+
+        // Find first contribution date and check if any contributions exist
+        DateOnly? firstContribution = null;
+        foreach (var (date, count) in contributions)
+        {
+            if (count > 0)
+            {
+                firstContribution = date;
                 break;
             }
         }
@@ -484,8 +555,14 @@ public sealed class GitHubClient : IGitHubClient
         DateOnly? currentEnd = null;
         var currentLength = 0;
 
-        foreach (var (date, count) in sortedContributions)
+        // Get sorted unique dates for iteration
+        var sortedDates = contributionsByDate.Keys.ToList();
+        sortedDates.Sort();
+
+        foreach (var date in sortedDates)
         {
+            var count = contributionsByDate[date];
+
             if (count > 0)
             {
                 // Has contribution - increment streak
@@ -807,8 +884,65 @@ internal sealed class ContributionCalendarResponse
 
 internal sealed class ContributionUserData
 {
-    public string? CreatedAt { get; set; }
     public required ContributionsCollectionData ContributionsCollection { get; set; }
+}
+
+internal sealed class UserCreatedAtResponse
+{
+    public UserCreatedAtData? User { get; set; }
+}
+
+internal sealed class UserCreatedAtData
+{
+    public string? CreatedAt { get; set; }
+}
+
+internal sealed class BatchedContributionResponse
+{
+    public BatchedContributionUserData? User { get; set; }
+}
+
+internal sealed class BatchedContributionUserData
+{
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
+    private Dictionary<string, ContributionsCollectionData?>? _yearlyContributions;
+
+    public Dictionary<string, ContributionsCollectionData?> YearlyContributions
+    {
+        get
+        {
+            if (_yearlyContributions != null)
+                return _yearlyContributions;
+
+            _yearlyContributions = new Dictionary<string, ContributionsCollectionData?>();
+
+            if (ExtensionData != null)
+            {
+                foreach (var (key, value) in ExtensionData)
+                {
+                    if (key.StartsWith("y") && char.IsDigit(key[1]))
+                    {
+                        try
+                        {
+                            var collection = value.Deserialize<ContributionsCollectionData>(new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                            });
+                            _yearlyContributions[key] = collection;
+                        }
+                        catch
+                        {
+                            _yearlyContributions[key] = null;
+                        }
+                    }
+                }
+            }
+
+            return _yearlyContributions;
+        }
+    }
 }
 
 internal sealed class ContributionsCollectionData

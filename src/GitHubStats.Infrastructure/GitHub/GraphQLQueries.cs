@@ -158,7 +158,6 @@ public static class GraphQLQueries
     public const string ContributionCalendarQuery = """
         query contributionCalendar($login: String!, $from: DateTime!, $to: DateTime!) {
             user(login: $login) {
-                createdAt
                 contributionsCollection(from: $from, to: $to) {
                     contributionCalendar {
                         totalContributions
@@ -173,4 +172,36 @@ public static class GraphQLQueries
             }
         }
         """;
+
+    /// <summary>
+    /// Lightweight query to fetch only user creation date for optimizing year range.
+    /// </summary>
+    public const string UserCreatedAtQuery = """
+        query userCreatedAt($login: String!) {
+            user(login: $login) {
+                createdAt
+            }
+        }
+        """;
+
+    /// <summary>
+    /// Generates a batched GraphQL query to fetch multiple years of contribution data in a single request.
+    /// Uses GraphQL aliases to fetch up to 5 years per request, dramatically reducing API calls.
+    /// </summary>
+    public static string GenerateBatchedContributionQuery(IReadOnlyList<(int Year, string From, string To)> yearRanges)
+    {
+        if (yearRanges.Count == 0)
+            return ContributionCalendarQuery;
+
+        var sb = new System.Text.StringBuilder(2048);
+        sb.Append("query batchedContributions($login: String!) { user(login: $login) {");
+
+        foreach (var (year, from, to) in yearRanges)
+        {
+            sb.Append($" y{year}: contributionsCollection(from: \"{from}\", to: \"{to}\") {{ contributionCalendar {{ totalContributions weeks {{ contributionDays {{ contributionCount date }} }} }} }}");
+        }
+
+        sb.Append(" } }");
+        return sb.ToString();
+    }
 }
