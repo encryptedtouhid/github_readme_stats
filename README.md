@@ -45,7 +45,7 @@ The API will be available at `http://localhost:5042`.
 Add to your GitHub README:
 
 ```markdown
-![GitHub Streak](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid)
+![GitHub Streak](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid)
 ```
 
 ### Streak Card Options
@@ -62,23 +62,23 @@ Add to your GitHub README:
 Use the `theme` parameter to customize your card:
 
 ```markdown
-![GitHub Streak](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=tokyonight)
+![GitHub Streak](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=tokyonight)
 ```
 
 #### Theme Examples
 
 | Theme | Preview |
 |-------|---------|
-| `github_light` | ![github_light](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=github_light) |
-| `github_dark` | ![github_dark](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=github_dark) |
-| `tokyonight` | ![tokyonight](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=tokyonight) |
-| `dracula` | ![dracula](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=dracula) |
-| `nord` | ![nord](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=nord) |
-| `radical` | ![radical](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=radical) |
-| `sunset_dark` | ![sunset_dark](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=sunset_dark) |
-| `ocean_deep` | ![ocean_deep](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=ocean_deep) |
-| `cyber` | ![cyber](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=cyber) |
-| `aurora` | ![aurora](https://dev.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=aurora) |
+| `github_light` | ![github_light](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=github_light) |
+| `github_dark` | ![github_dark](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=github_dark) |
+| `tokyonight` | ![tokyonight](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=tokyonight) |
+| `dracula` | ![dracula](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=dracula) |
+| `nord` | ![nord](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=nord) |
+| `radical` | ![radical](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=radical) |
+| `sunset_dark` | ![sunset_dark](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=sunset_dark) |
+| `ocean_deep` | ![ocean_deep](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=ocean_deep) |
+| `cyber` | ![cyber](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=cyber) |
+| `aurora` | ![aurora](https://github-readme-stats.tuhidulhossain.com/api/streak?username=encryptedtouhid&theme=aurora) |
 
 #### GitHub Themes
 
