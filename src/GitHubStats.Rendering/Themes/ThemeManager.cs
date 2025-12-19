@@ -832,6 +832,15 @@ public static class ThemeManager
             BgColor = "EBF8FF",
             BorderColor = "BEE3F8",
             RingColor = "63B3ED"
+        },
+        ["khaled_theme"] = new CardColors
+        {
+            TitleColor = "58A6FF",
+            TextColor = "C9D1D9",
+            IconColor = "58A6FF",
+            BgColor = "0C1117",
+            BorderColor = "30363D",
+            RingColor = "58A6FF"
         }
     };
 
