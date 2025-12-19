@@ -186,15 +186,21 @@ public static class GraphQLQueries
 
     /// <summary>
     /// Generates a batched GraphQL query to fetch multiple years of contribution data in a single request.
-    /// Uses GraphQL aliases to fetch up to 5 years per request, dramatically reducing API calls.
+    /// Uses GraphQL aliases to fetch up to 10 years per request, dramatically reducing API calls.
+    /// Optionally includes createdAt to avoid a separate query for user creation date.
     /// </summary>
-    public static string GenerateBatchedContributionQuery(IReadOnlyList<(int Year, string From, string To)> yearRanges)
+    public static string GenerateBatchedContributionQuery(IReadOnlyList<(int Year, string From, string To)> yearRanges, bool includeCreatedAt = false)
     {
         if (yearRanges.Count == 0)
             return ContributionCalendarQuery;
 
         var sb = new System.Text.StringBuilder(2048);
         sb.Append("query batchedContributions($login: String!) { user(login: $login) {");
+
+        if (includeCreatedAt)
+        {
+            sb.Append(" createdAt");
+        }
 
         foreach (var (year, from, to) in yearRanges)
         {

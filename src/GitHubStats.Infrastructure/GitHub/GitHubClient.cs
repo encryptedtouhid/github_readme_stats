@@ -350,42 +350,52 @@ public sealed class GitHubClient : IGitHubClient
         var currentYear = DateTime.UtcNow.Year;
         var minYear = startingYear ?? 2005; // Git was created in 2005
 
-        // First, fetch the user's creation date to optimize the year range
-        var userCreatedYear = await GetUserCreatedYearAsync(username, cancellationToken);
-        if (!startingYear.HasValue && userCreatedYear.HasValue)
-        {
-            minYear = Math.Max(minYear, userCreatedYear.Value);
-        }
-
-        // Build list of years to fetch
+        // Build initial years to fetch - we'll include createdAt in first batch to optimize
         var yearsToFetch = Enumerable.Range(minYear, currentYear - minYear + 1).ToList();
 
-        // Use batched GraphQL queries - fetch up to 5 years per request in parallel
-        const int batchSize = 5;
+        // Use batched GraphQL queries - fetch up to 10 years per request in parallel
+        const int batchSize = 10;
         var batches = yearsToFetch
             .Select((year, index) => new { year, index })
             .GroupBy(x => x.index / batchSize)
             .Select(g => g.Select(x => x.year).ToList())
             .ToList();
 
-        // Execute batched queries in parallel
-        var batchTasks = batches.Select(batch => FetchBatchedContributionsAsync(username, batch, currentYear, cancellationToken)).ToList();
+        // Execute batched queries in parallel, include createdAt in first batch
+        var batchTasks = batches.Select((batch, index) =>
+            FetchBatchedContributionsAsync(username, batch, currentYear, includeCreatedAt: index == 0, cancellationToken)).ToList();
         var batchResults = await Task.WhenAll(batchTasks);
 
+        // Get user created year from first batch response if available
+        int? userCreatedYear = null;
+        if (batchResults.Length > 0 && batchResults[0] != null)
+        {
+            userCreatedYear = batchResults[0]!.CreatedYear;
+        }
+
         // Aggregate results - contributions are already sorted per year, merge them
+        // Filter out years before user creation if we have that info
+        var effectiveMinYear = !startingYear.HasValue && userCreatedYear.HasValue
+            ? Math.Max(minYear, userCreatedYear.Value)
+            : minYear;
+
         var allContributions = new List<(DateOnly Date, int Count)>(yearsToFetch.Count * 366);
         var totalContributions = 0;
 
         foreach (var batchResult in batchResults.Where(r => r != null))
         {
-            foreach (var yearResult in batchResult!)
+            foreach (var yearResult in batchResult!.YearResults)
             {
+                // Skip years before user creation
+                if (yearResult.Year < effectiveMinYear)
+                    continue;
+
                 totalContributions += yearResult.TotalContributions;
                 allContributions.AddRange(yearResult.Contributions);
             }
         }
 
-        // Sort once after merging all years (required since batched fetch doesn't guarantee order)
+        // Sort once after merging all years (safety measure - data should already be sorted)
         allContributions.Sort((a, b) => a.Date.CompareTo(b.Date));
 
         // Calculate streaks
@@ -401,38 +411,11 @@ public sealed class GitHubClient : IGitHubClient
         };
     }
 
-    private async Task<int?> GetUserCreatedYearAsync(string username, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var variables = new Dictionary<string, object?>
-            {
-                ["login"] = username
-            };
-
-            var response = await ExecuteGraphQLAsync<UserCreatedAtResponse>(
-                GraphQLQueries.UserCreatedAtQuery,
-                variables,
-                cancellationToken);
-
-            if (response.Data?.User?.CreatedAt != null &&
-                DateTime.TryParse(response.Data.User.CreatedAt, out var createdDate))
-            {
-                return createdDate.Year;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to fetch user creation date for {Username}", username);
-        }
-
-        return null;
-    }
-
-    private async Task<List<(int TotalContributions, List<(DateOnly Date, int Count)> Contributions)>?> FetchBatchedContributionsAsync(
+    private async Task<BatchedContributionResult?> FetchBatchedContributionsAsync(
         string username,
         List<int> years,
         int currentYear,
+        bool includeCreatedAt,
         CancellationToken cancellationToken)
     {
         try
@@ -447,7 +430,7 @@ public sealed class GitHubClient : IGitHubClient
                 return (year, fromDate.ToString("yyyy-MM-ddTHH:mm:ssZ"), toDate.ToString("yyyy-MM-ddTHH:mm:ssZ"));
             }).ToList();
 
-            var query = GraphQLQueries.GenerateBatchedContributionQuery(yearRanges);
+            var query = GraphQLQueries.GenerateBatchedContributionQuery(yearRanges, includeCreatedAt);
             var variables = new Dictionary<string, object?>
             {
                 ["login"] = username
@@ -460,7 +443,15 @@ public sealed class GitHubClient : IGitHubClient
                 throw new UserNotFoundException(username);
             }
 
-            var results = new List<(int TotalContributions, List<(DateOnly Date, int Count)> Contributions)>();
+            // Extract created year if available
+            int? createdYear = null;
+            if (includeCreatedAt && response.Data.User.CreatedAt != null &&
+                DateTime.TryParse(response.Data.User.CreatedAt, out var createdDate))
+            {
+                createdYear = createdDate.Year;
+            }
+
+            var yearResults = new List<(int Year, int TotalContributions, List<(DateOnly Date, int Count)> Contributions)>();
 
             foreach (var year in years)
             {
@@ -481,11 +472,11 @@ public sealed class GitHubClient : IGitHubClient
                         }
                     }
 
-                    results.Add((calendar.TotalContributions, contributions));
+                    yearResults.Add((year, calendar.TotalContributions, contributions));
                 }
             }
 
-            return results;
+            return new BatchedContributionResult(createdYear, yearResults);
         }
         catch (UserNotFoundException)
         {
@@ -497,6 +488,13 @@ public sealed class GitHubClient : IGitHubClient
             return null;
         }
     }
+
+    /// <summary>
+    /// Result from a batched contribution fetch, including optional user creation year.
+    /// </summary>
+    private sealed record BatchedContributionResult(
+        int? CreatedYear,
+        List<(int Year, int TotalContributions, List<(DateOnly Date, int Count)> Contributions)> YearResults);
 
     private static (StreakInfo Current, StreakInfo Longest, DateOnly? FirstContribution) CalculateStreaks(
         List<(DateOnly Date, int Count)> contributions)
@@ -904,6 +902,8 @@ internal sealed class BatchedContributionResponse
 
 internal sealed class BatchedContributionUserData
 {
+    public string? CreatedAt { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 
