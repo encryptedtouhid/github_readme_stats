@@ -1,4 +1,4 @@
-name: Deploy to GreenCloud (Docker)
+name: Deploy to Production
 
 on:
   push:
@@ -59,7 +59,7 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to VM
+    name: Deploy to Production
     needs: build
     runs-on: ubuntu-latest
     environment: production
