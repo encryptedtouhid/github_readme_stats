@@ -63,6 +63,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout
@@ -75,8 +78,8 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           port: ${{ secrets.VM_SSH_PORT || 22 }}
-          source: "deploy/docker-compose.yml,deploy/Caddyfile"
-          target: "~/github-readme-stats"
+          source: "deploy/docker-compose.yml"
+          target: "/opt/apps/github-readme-stats"
           strip_components: 1
 
       - name: Pull & restart containers
@@ -87,26 +90,25 @@ jobs:
           REDIS_URL: ${{ secrets.REDIS_URL }}
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOMAIN: github-readme-stats.tuhidulhossain.com
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           port: ${{ secrets.VM_SSH_PORT || 22 }}
-          envs: APP_IMAGE,GH_STATS_TOKEN,REDIS_URL,GHCR_USER,GHCR_TOKEN,DOMAIN
+          envs: APP_IMAGE,GH_STATS_TOKEN,REDIS_URL,GHCR_USER,GHCR_TOKEN
           script: |
             set -e
-            cd ~/github-readme-stats
+            mkdir -p /opt/apps/github-readme-stats && cd /opt/apps/github-readme-stats
             umask 077
             cat > .env <<EOT
             APP_IMAGE=${APP_IMAGE}
             GH_STATS_TOKEN=${GH_STATS_TOKEN}
             REDIS_URL=${REDIS_URL}
-            DOMAIN=${DOMAIN}
             EOT
             echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
             docker compose pull app
             docker compose up -d --remove-orphans
+            echo "${APP_IMAGE##*:}" > DEPLOYED_SHA
             docker image prune -f
             for i in $(seq 1 20); do
               if docker compose exec -T app curl -fsS http://localhost:8080/health >/dev/null 2>&1; then

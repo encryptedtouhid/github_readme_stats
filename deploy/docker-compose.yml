@@ -1,29 +1,23 @@
+# github-readme-stats — production on the GreenCloud VM, fronted by the shared Caddy.
+#
+# Lives at /opt/apps/github-readme-stats on the VM. The image is built by GitHub
+# Actions and pulled from GHCR; runtime config comes from ./.env (written by the
+# deploy workflow, never committed). Caddy reaches the container by name on the
+# external `web` network — see deploy/caddy-site.snippet.
 services:
   app:
-    image: ${APP_IMAGE:-ghcr.io/encryptedtouhid/github_readme_stats:latest}
+    image: ${APP_IMAGE:?Set APP_IMAGE in .env}
+    container_name: github-readme-stats
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      GitHub__PersonalAccessTokens__0: ${GH_STATS_TOKEN}
-      Cache__RedisConnectionString: ${REDIS_URL}
+      GitHub__PersonalAccessTokens__0: ${GH_STATS_TOKEN:?Set GH_STATS_TOKEN in .env}
+      Cache__RedisConnectionString: ${REDIS_URL:?Set REDIS_URL in .env}
+    networks:
+      - web
     expose:
       - "8080"
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN:-github-readme-stats.tuhidulhossain.com}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      - app
-
-volumes:
-  caddy-data:
-  caddy-config:
+networks:
+  web:
+    external: true

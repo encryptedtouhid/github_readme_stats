@@ -1,0 +1,12 @@
+# ===== github-readme-stats.tuhidulhossain.com (appended to /opt/webstack/caddy/Caddyfile) =====
+# Certificate is obtained automatically (Let's Encrypt via HTTP-01, which passes
+# through the Cloudflare proxy). Cloudflare SSL mode: Full (strict).
+# CF-Connecting-IP is forwarded as X-Forwarded-For so the app's per-IP rate
+# limiting sees the real visitor, not Cloudflare's edge.
+github-readme-stats.tuhidulhossain.com {
+	encode gzip zstd
+	reverse_proxy github-readme-stats:8080 {
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+	}
+}
+# ===== /github-readme-stats =====
