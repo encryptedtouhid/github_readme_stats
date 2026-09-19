@@ -12,7 +12,6 @@ Every push to `main` runs `.github/workflows/deploy.yml`:
 |---------|-------|------|
 | `caddy` | `caddy:2-alpine` | TLS (Let's Encrypt) + reverse proxy on :80/:443 |
 | `app`   | `ghcr.io/…/github_readme_stats` | The .NET 9 API on :8080 (internal) |
-| `redis` | `redis:7-alpine` | Cache, persisted in a volume |
 
 ## One-time VM setup
 
@@ -29,6 +28,7 @@ scp deploy/setup-vm.sh <user>@<vm-ip>:~ && ssh <user>@<vm-ip> bash setup-vm.sh
 | `VM_SSH_KEY` | Private key (PEM) whose public half is in `~/.ssh/authorized_keys` on the VM |
 | `VM_SSH_PORT` | Optional, defaults to `22` |
 | `GH_STATS_TOKEN` | GitHub PAT used by the app to query the GitHub API |
+| `REDIS_URL` | Existing Redis connection string (StackExchange.Redis format) |
 
 ## DNS / Cloudflare
 
