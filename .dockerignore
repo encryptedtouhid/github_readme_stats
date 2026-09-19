@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/.idea/
+**/.vs/
+**/*.user
+**/appsettings.Development.json
+**/appsettings.Local.json
+.git
+.github
+.claude
+.playwright-mcp
+assets
+release
+deploy
+*.md
