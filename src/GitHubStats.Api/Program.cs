@@ -5,6 +5,7 @@ using GitHubStats.Infrastructure.Configuration;
 using GitHubStats.Infrastructure.Extensions;
 using GitHubStats.Rendering.Extensions;
 using HealthChecks.Redis;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.RateLimiting;
 using OpenTelemetry.Metrics;
@@ -163,6 +164,16 @@ builder.Services.AddProblemDetails();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
+// Behind a reverse proxy (Caddy/Cloudflare) in Docker: trust X-Forwarded-* so
+// per-IP rate limiting sees the real client address.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
+
 app.UseResponseCompression();
 app.UseCors("AllowAll");
 app.UseRateLimiter();

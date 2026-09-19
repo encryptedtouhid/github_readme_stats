@@ -1,14 +1,23 @@
-name: Deploy to FTP
+name: Deploy to GreenCloud (Docker)
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
-  deploy:
-    name: Build & Deploy
+  build:
+    name: Build & Push Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
 
     steps:
       - name: Checkout
@@ -19,66 +28,88 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore src/GitHubStats.sln
+      - name: Test
+        run: dotnet test src/GitHubStats.sln -c Release --nologo
 
-      - name: Build
-        run: dotnet build src/GitHubStats.sln -c Release --no-restore
-
-      - name: Publish
-        run: dotnet publish src/GitHubStats.Api/GitHubStats.Api.csproj -c Release -o publish --no-build
-
-      - name: Inject secrets into appsettings.json
-        env:
-          GH_STATS_TOKEN: ${{ secrets.GH_STATS_TOKEN }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-        run: |
-          cd publish
-          cat appsettings.json | python3 -c "
-          import sys, json
-          cfg = json.load(sys.stdin)
-          import os
-          cfg['GitHub']['PersonalAccessTokens'] = [os.environ['GH_STATS_TOKEN']]
-          cfg['Cache']['RedisConnectionString'] = os.environ['REDIS_URL']
-          json.dump(cfg, sys.stdout, indent=2)
-          " > appsettings.tmp.json
-          mv appsettings.tmp.json appsettings.json
-
-      - name: Stop app (upload app_offline.htm to release file locks)
-        env:
-          FTP_USER: ${{ vars.FTP_USERNAME }}
-          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
-          FTP_HOST: ${{ vars.FTP_SERVER }}
-          FTP_DIR: ${{ vars.FTP_DIRECTORY }}
-        run: |
-          curl --ssl-reqd -k --ftp-create-dirs \
-            -u "${FTP_USER}:${FTP_PASS}" \
-            -T - "ftp://${FTP_HOST}:21${FTP_DIR}app_offline.htm" \
-            <<< '<html><body>Deploying... please wait.</body></html>'
-          echo "Waiting for IIS to release file locks..."
-          sleep 5
-
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          server: ${{ vars.FTP_SERVER }}
-          username: ${{ vars.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          protocol: ftps
-          security: loose
-          local-dir: ./publish/
-          server-dir: ${{ vars.FTP_DIRECTORY }}
-          dangerous-clean-slate: true
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restart app (remove app_offline.htm)
-        env:
-          FTP_USER: ${{ vars.FTP_USERNAME }}
-          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
-          FTP_HOST: ${{ vars.FTP_SERVER }}
-          FTP_DIR: ${{ vars.FTP_DIRECTORY }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image name
+        id: meta
         run: |
-          curl --ssl-reqd -k \
-            -u "${FTP_USER}:${FTP_PASS}" \
-            -Q "DELE ${FTP_DIR}app_offline.htm" \
-            "ftp://${FTP_HOST}:21/" || true
+          IMAGE="${REGISTRY}/$(echo "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:latest
+            ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to VM
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy deploy files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          source: "deploy/docker-compose.yml,deploy/Caddyfile"
+          target: "~/github-readme-stats"
+          strip_components: 1
+
+      - name: Pull & restart containers
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_IMAGE: ${{ needs.build.outputs.image }}:${{ github.sha }}
+          GH_STATS_TOKEN: ${{ secrets.GH_STATS_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOMAIN: github-readme-stats.tuhidulhossain.com
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          envs: APP_IMAGE,GH_STATS_TOKEN,GHCR_USER,GHCR_TOKEN,DOMAIN
+          script: |
+            set -e
+            cd ~/github-readme-stats
+            umask 077
+            cat > .env <<EOT
+            APP_IMAGE=${APP_IMAGE}
+            GH_STATS_TOKEN=${GH_STATS_TOKEN}
+            DOMAIN=${DOMAIN}
+            EOT
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
+            docker compose pull app
+            docker compose up -d --remove-orphans
+            docker image prune -f
+            for i in $(seq 1 20); do
+              if docker compose exec -T app curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+                echo "App healthy"; exit 0
+              fi
+              sleep 3
+            done
+            echo "App failed health check"; docker compose logs --tail=100 app; exit 1
